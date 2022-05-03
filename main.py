@@ -4,12 +4,12 @@ from tkinter import filedialog as fd
 from tkinter.messagebox import showinfo
 from tkinter.scrolledtext import ScrolledText
 
-from numpy import source
-from convert_utils import simple2Trad, create_ebook, read_file
-from download_utils import Downloader, create_metadata
+from utils.convert import simple2Trad, create_ebook, read_file
+from utils.download import Downloader
+from utils.config import TMP_DIRECTORY, TMP_TXT_PATH, reset_TMP_DIRECTORY, OUTPUT_DIRECTORY
 import os
 import subprocess
-from config import TMP_FILE
+
 
 ERROR_MESSAGE = {'read_error':lambda : showinfo(title="錯誤",message="無法解析此檔案編碼"),
                  'search_error':lambda : showinfo(title="訊息",message="找不到此小說"),
@@ -40,37 +40,35 @@ s.configure('normal.TButton', font=('courier', 14, 'normal'))
 s.configure('normal.TCheckbutton', font=('courier', 12, 'normal'))
 lableFrame_font = ('courier', 14, 'normal')
 
-def delete_if_exist():
-    if os.path.exists(TMP_FILE):
-        os.remove(TMP_FILE)
-
+def get_output_path(novel_name:str):
+    output_file_name = novel_name + '.epub'
+    return os.path.join(OUTPUT_DIRECTORY, output_file_name)
+    
 def clear_text_var(var):
     if var.get("1.0","end-1c") != '':
         var.delete("1.0","end")
 
 def convert_txt():
     global FILE_PATH
-    # Temp file exists
-    if os.path.exists(TMP_FILE):
-        return True
-    else:
-        content = read_file(FILE_PATH)
-        # Read fail
-        if content == None:
-            return False
 
-        content = simple2Trad(content)
-        # Write temp file
-        with open(TMP_FILE, "w", encoding="utf-8") as f:
-            f.write(content)
-        return True
+    content = read_file(FILE_PATH)
+    # Read fail
+    if content == None:
+        return False
+
+    content = simple2Trad(content)
+    # Write temp file
+    reset_TMP_DIRECTORY()
+    with open(TMP_TXT_PATH, "w", encoding="utf-8") as f:
+        f.write(content)
+    return True
+
 def open_explorer(path):
     if open_explorer_var.get():
         subprocess.Popen('explorer "{}"'.format(path))
 
 def select_files():
     global FILE_PATH
-    delete_if_exist()
     filetypes = (('text files', '*.txt'),)
     file_name = fd.askopenfilename(
         title='Open files',
@@ -80,9 +78,11 @@ def select_files():
     # Update the file name
     FILE_PATH = file_name
     file_path_var.set(file_name)
-    book_name = simple2Trad(os.path.basename(file_name).split('.')[0])
-    
-    output_name_var.set(os.path.join(".","output",book_name + '.epub'))
+    # Get book name from file name
+    book_name = os.path.basename(file_name).split('.')[0]
+    book_name = simple2Trad(book_name)
+    # Set output path
+    output_name_var.set(get_output_path(book_name))
     # Enable the convert button
     convert_btn['state'] = 'normal'
 
@@ -93,18 +93,19 @@ def convert2epub():
         return
 
     clear_text_var(chapter_preview)
-    with open(TMP_FILE, "r",encoding = 'utf-8') as f:
+    with open(TMP_TXT_PATH, "r",encoding = 'utf-8') as f:
         lines = f.readlines()
-    chapter_names =  create_ebook(lines, output_name_var.get())
-    chapter_preview.insert(tk.INSERT, "".join(chapter_names))
-    showinfo(title="訊息",message="轉換結束")
+    chapters = create_ebook(lines, output_name_var.get())
+    chapter_preview.insert(tk.INSERT, "".join(chapters))
+    showinfo(title="訊息",message="轉換成功")
     
+    # Open explorer
     path = os.path.dirname(output_name_var.get())
     if path == '':
         path = '.'
     open_explorer(path)
 
-def create_label_frame(text, parent):
+def create_label_frame(text:str, parent):
     l = ttk.Label(text=text, font=lableFrame_font)
     frame = ttk.LabelFrame(parent, labelwidget=l)
     return frame
@@ -117,35 +118,38 @@ def search_novel():
     # Not found
     if result == None:
         ERROR_MESSAGE["search_error"]()
+        # Reset variable
         selected_novel_var.set([])
+        output_name_var.set('')
+        # Disable button
         download_and_convert_btn['state'] = 'disable'
         sure_select_btn['state'] = 'disable'
-        output_name_var.set('')
         return
 
     NOVEL_METADATA = result
-
     novel_names = [metadata['novel_name'] + ' (來源{})'.format(metadata['source_idx']) for metadata in NOVEL_METADATA]
     selected_novel_var.set(novel_names)
+    # Set button state
     download_and_convert_btn['state'] = 'disable'
     sure_select_btn['state'] = 'normal'
 
 def select_novel():
+    """確定選取
+    """
     global NOVEL_METADATA
     selected_idx = novel_listbox.curselection()[0]
-    download_and_convert_btn['state'] = 'normal'
+    download_and_convert_btn['state'] = 'normal' # Enable convert button
+    # Set output name
     novel_name = NOVEL_METADATA[selected_idx]['novel_name']
-    output_name_var.set(os.path.join(".","output",novel_name  + '.epub'))
+    output_name_var.set(get_output_path(novel_name))
 
 def download_and_convert_novel():
-    global NOVEL_METADATA, FILE_PATH, SOURCE_IDX
+    global NOVEL_METADATA, FILE_PATH
     # Get selected novel and its index
     selected_idx = novel_listbox.curselection()[0]
-    # Download novel
+    # Download novel and convert
     DOWNLOADER.download(NOVEL_METADATA[selected_idx])
-    # Do Covert
-    delete_if_exist()
-    FILE_PATH = "./tmp/novel.txt" # set global file path for convert2epub
+    FILE_PATH = TMP_TXT_PATH # set global file path for function convert2epub
     convert2epub()
 
 

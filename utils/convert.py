@@ -1,14 +1,16 @@
 from opencc import OpenCC
-import re
-import ebook
-import os
-MAX_CHAPTER_NAME_LEN = 30
+import re, os
+from utils.ebook import Ebook
+from utils.config import MAX_CHAPTER_NAME_LEN
+
 FINDS = [u'第(\d)+[章卷]',
         '第[一二三四五六七八九十千百零兩]+[章卷]',
         '序章']
 
 def simple2Trad(content:str):
     """Translate Simplified Chinese to tradtional Chinese
+    Args:
+        content: str, string for converted
     """
     cc = OpenCC('s2twp')
     content = cc.convert(content)
@@ -37,7 +39,7 @@ def get_search(line:str):
         return False
     for f in FINDS:
         search = re.search(f, line, re.DOTALL)
-        if search:
+        if search != None:
             return search
     return False
     
@@ -50,7 +52,7 @@ def create_ebook(lines:list, output_name:str):
     """
     # Create new book
     book_name = os.path.basename(output_name).replace('.epub','')
-    book = ebook.Ebook(name=book_name)
+    book = Ebook(name=book_name)
 
     content = "<p>" # the content of the chapter
     chapter_name = "" # the name of the chapter

@@ -1,17 +1,15 @@
-from __future__ import unicode_literals
-import os
-from re import L
+# from __future__ import unicode_literals
+import configparser, os, json
 from flask import Flask, request, abort
+# LineBot
 from linebot import LineBotApi, WebhookHandler
 from linebot.exceptions import InvalidSignatureError
 from linebot.models import MessageEvent, TextMessage, TextSendMessage,FlexSendMessage
-import configparser
-from download_utils import Downloader, create_metadata
-import json
-
-from convert_utils import read_file, simple2Trad, create_ebook
-from config import TMP_FILE
-from google_drive_utils import upload
+# Utils
+from utils.download import Downloader, create_metadata
+from utils.convert import read_file, simple2Trad, create_ebook
+from utils.config import TMP_FILE
+from utils.google_drive import upload
 
 # Global Variable
 DOWNLOADER = Downloader()

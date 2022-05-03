@@ -7,6 +7,7 @@ from bs4 import BeautifulSoup
 from opencc import OpenCC
 import patoolib
 
+from utils.config import TMP_DIRECTORY, TMP_TXT_PATH, TMP_RAR_PATH, reset_TMP_DIRECTORY
 
 T2S = OpenCC('t2s') # Tradtional to Simple
 S2T = OpenCC('s2twp') # Simple to Traditional
@@ -20,35 +21,28 @@ def open_url(url, decode=True, encoding='utf-8',post_data=None):
     Return: if decode is True, then return BeautifulSoup, else return bytes
     """
     headers={'User-Agent':'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:60.0) Gecko/20100101 Firefox/60.0'}
-    # Post
-    if post_data !=None:
-        request = Request(url, headers=headers, data=post_data)
-    else:
-        request = Request(url, headers=headers)
+    request = Request(url, headers=headers, data=post_data)
 
     # decode html for search
-    if decode:
-        html = urlopen(request).read().decode(encoding)
-        return BeautifulSoup(html, 'html.parser')
-    # for download file
-    else:
-        content = urlopen(request).read()
-    return content
+    content = urlopen(request).read()
 
+    # for download file
+    if not decode:
+        return content
+    else:
+        return BeautifulSoup(content.decode(encoding), 'html.parser')
+        
+    
 def download_file(url, output_path:str):
-    file = open_url(url,decode=False)
+    file = open_url(url, decode=False)
     with open(output_path, 'wb') as f:
         f.write(file)
 
 def extract_and_move_file():
-    file_path = './tmp'
-    if os.path.exists(file_path):
-        shutil.rmtree(file_path)
-    os.mkdir(file_path)
-    patoolib.extract_archive("tmp.rar", outdir=file_path)
-    files = os.listdir(file_path)
-
-    shutil.move(os.path.join(file_path, files[0]), os.path.join(file_path, "novel.txt"))
+    reset_TMP_DIRECTORY()
+    patoolib.extract_archive(TMP_RAR_PATH, outdir=TMP_DIRECTORY)
+    files = os.listdir(TMP_DIRECTORY)
+    shutil.move(os.path.join(TMP_DIRECTORY, files[0]), TMP_TXT_PATH)
 
 def encode_chinese(data, is_post_data=False):
     # is post data
@@ -66,7 +60,11 @@ def create_metadata(novel_name:str, novel_idx:int, source_idx:int=None):
     """
     if source_idx != None:
         source_idx = int(source_idx)
-    return {'novel_name':novel_name, 'novel_idx':int(novel_idx), 'source_idx':source_idx}
+
+    metadata = {'novel_name': novel_name, 
+                'novel_idx': int(novel_idx), 
+                'source_idx': source_idx}
+    return metadata
 
 class Downloader(object):
     def __init__(self, search_all_source=False):
@@ -155,7 +153,7 @@ class Zxcs_downloader(object):
         file_url = files[0].find('a').get('href')
 
         # Download rar
-        download_file(file_url,'tmp.rar')
+        download_file(file_url, TMP_RAR_PATH)
         extract_and_move_file()
 
 class Ijjxsw_downloader(object):
@@ -192,8 +190,5 @@ class Ijjxsw_downloader(object):
         download_url = encode_chinese(download_url)
 
         # Download txt
-        file_path = './tmp'
-        if os.path.exists(file_path):
-            shutil.rmtree(file_path)
-        os.mkdir(file_path)
-        download_file(download_url, os.path.join(file_path, 'novel.txt'))
+        reset_TMP_DIRECTORY()
+        download_file(download_url, TMP_TXT_PATH)

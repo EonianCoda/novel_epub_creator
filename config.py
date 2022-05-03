@@ -1,5 +1,0 @@
-TMP_FILE = "tmp.txt"
-SEARCH_RESULTS_PICKLE = "./database/search_results.pickle"
-DOWNLOAD_RESULTS_PICKLE = "./database/download_results.pickle"
-SEARCH_RESULTS_CSV = "./database/search_results.csv"
-DOWNLOAD_RESULTS_CSV = "./database/download_results.csv"
