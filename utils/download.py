@@ -1,6 +1,7 @@
+import re
 from urllib.request import urlopen, Request
 from urllib.parse import quote
-from urllib import parse
+from urllib import parse, response
 import os, shutil, string, glob
 
 from bs4 import BeautifulSoup
@@ -9,7 +10,7 @@ import patoolib
 from utils.config import TMP_DIRECTORY, TMP_TXT_PATH, TMP_RAR_PATH, TMP_ZIP_PATH, reset_TMP_DIRECTORY
 from utils.convert import simple2Trad, Trad2simple
 
-def open_url(url, decode=True, encoding='utf-8',post_data=None):
+def open_url(url, decode=True, encoding='utf-8', post_data=None, return_response=False):
     """
     Args:
         url: url
@@ -20,9 +21,12 @@ def open_url(url, decode=True, encoding='utf-8',post_data=None):
     request = Request(url, headers=headers, data=post_data)
 
     # decode html for search
-    content = urlopen(request).read()
+    response = urlopen(request)
+    if return_response:
+        return response
 
-    # for download file
+    content = response.read()
+    # for download file 
     if not decode:
         return content
     else:
@@ -71,6 +75,7 @@ class Downloader(object):
         self.downloader = [Zxcs_downloader(),     # 知軒藏書
                             Ijjxsw_downloader(),  # 久久小說下載網
                             Qiuyewx_downloader(), # 平板电子书网
+                            Qinkan_downloader(),  # 請看小說網
                             Xsla_downloader(), ]  # 八零电子书 (Too slow)
         self.search_all_source = search_all_source
     def search(self, key_word:str):
@@ -232,6 +237,83 @@ class Qiuyewx_downloader(object):
         # Download txt
         reset_TMP_DIRECTORY()
         download_file(download_url, TMP_TXT_PATH)
+
+class Qinkan_downloader(object):
+    """Download novel from websit: http://www.qinkan.net/
+    """
+    def __init__(self):
+        self.base_url = "http://www.qinkan.net/"
+        self.search_url = self.base_url + 'e/search/index.php'
+
+    
+    def search_page(self, url:str):
+        soup = open_url(url, encoding='gb18030')
+        results = soup.find('div', class_="listBoxs").find('ul').find_all('li')
+        novels_metadata = []
+
+        for result in results:
+            novel_name = simple2Trad(result.find('a').text)
+            novel_name = novel_name.split('》')[0][1:]
+            url = result.find('a').get('href')
+            novel_idx = url.split('/')[-1].split('.')[0]
+            novels_metadata.append(create_metadata(novel_name, novel_idx))
+        return novels_metadata
+
+    def search(self, key_word:str):
+        # Encoding post data
+        post_data = {'tbname':'txt', 'tempid':'1','keyboard':Trad2simple(key_word), 'show':'title,smalltext,writer'}
+        post_data = encode_chinese(post_data, is_post_data=True, encoding='gb2312')
+
+        response = open_url(self.search_url, post_data=post_data, return_response=True)
+        # Get response url for anther page
+        url = response.geturl()
+        soup = BeautifulSoup(response.read().decode('gb18030'), 'html.parser')
+        results = soup.find('div', class_="listBoxs").find('ul').find_all('li')
+        if results == []:
+            return None
+
+        num_novels = int(soup.find('h1').find('strong').text)
+        num_pages = int((num_novels - 1) / 30) + 1
+        paged_url = (url.split('-')[0] + '-{}-' + url.split('-')[-1])
+
+        novel_metadatas = []
+        # Search pages
+        for i in range(num_pages):
+            metadatas = self.search_page(paged_url.format(i))
+            novel_metadatas.extend(metadatas)
+            # Max pages = 15
+            if i == 15:
+                break
+        return novel_metadatas
+
+    def download(self, metadata:dict):
+        # Get download link
+        novel_name, novel_idx = metadata['novel_name'], metadata['novel_idx']
+        novel_name = Trad2simple(novel_name)
+        download_url = "http://www.qinkan.net/book/{}.html".format(novel_idx)
+        soup = open_url(download_url, encoding="gb18030")
+
+        # Download file
+        download_url = soup.find_all('a',class_="downButton")[1].get('href')
+        file_extension = download_url.split('.')[-1]
+        download_url = encode_chinese(download_url)
+        if file_extension == 'txt':
+            reset_TMP_DIRECTORY()
+            download_file(download_url, TMP_TXT_PATH)
+            return
+        # Is rar or zip
+        if file_extension == 'zip':
+            file_path = TMP_ZIP_PATH
+        elif file_extension == 'rar':
+            file_path = TMP_RAR_PATH
+        # Extract and 
+        download_file(download_url, file_path)
+        reset_TMP_DIRECTORY()
+        patoolib.extract_archive(file_path, outdir=TMP_DIRECTORY)
+        for file_path in glob.glob(os.path.join(TMP_DIRECTORY,'*.txt')):
+            if novel_name in file_path:
+                shutil.move(file_path, TMP_TXT_PATH)
+                break
 
 
 class Xsla_downloader(object):

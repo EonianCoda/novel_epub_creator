@@ -28,7 +28,7 @@ def Trad2simple(content:str):
 def read_file(file_name:str):
     """Read file
     """
-    encodings = ['gbk','big5','utf-8']
+    encodings = ['gbk','big5','utf-8','gb2312','gb18030']
     flag = False
     for encoding in encodings:
         try:
