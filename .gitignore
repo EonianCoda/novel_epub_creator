@@ -4,6 +4,7 @@ __pycache__
 build
 dist
 .vscode
+.tmp
 ### File ###
 tmp*
 crawler*.py
