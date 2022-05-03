@@ -8,7 +8,7 @@ from linebot.models import MessageEvent, TextMessage, TextSendMessage,FlexSendMe
 # Utils
 from utils.download import Downloader, create_metadata
 from utils.convert import read_file, simple2Trad, create_ebook
-from utils.config import TMP_FILE
+from utils.config import TMP_TXT_PATH, LINE_BOT_TEMPLATE_FILE_PATH, get_OUTPUT_PATH
 from utils.google_drive import upload
 
 # Global Variable
@@ -20,17 +20,16 @@ config.read('config.ini')
 line_bot_api = LineBotApi(config.get('line-bot', 'CHANNEL_ACCESS_TOKEN'))
 handler = WebhookHandler(config.get('line-bot', 'CHANNEL_SECRET'))
 
-def translate_and_convert_novel(file_path:str, novel_name:str):
-    content = read_file(file_path)
-    content = simple2Trad(content)
-    with open(TMP_FILE, "w", encoding="utf-8") as f:
+def translate_and_convert_novel(novel_name:str):
+    content = simple2Trad(read_file(TMP_TXT_PATH))
+    with open(TMP_TXT_PATH, "w", encoding="utf-8") as f:
         f.write(content)
-    with open(TMP_FILE, "r",encoding = 'utf-8') as f:
+    with open(TMP_TXT_PATH, "r", encoding = 'utf-8') as f:
         lines = f.readlines()
-
-    file_path = os.path.join("./output", "{}.epub".format(novel_name))
-    chapter_names = create_ebook(lines, file_path)
-    if chapter_names == []:
+    # Create novel epub
+    chapters = create_ebook(lines, get_OUTPUT_PATH(novel_name))
+    # create fail
+    if chapters == []:
         return False
     else:
         return True
@@ -70,17 +69,17 @@ def echo(event):
     global DOWNLOADER
     if event.source.user_id != "Udeadbeefdeadbeefdeadbeefdeadbeef":
         try :
-            action, name = event.message.text.split(',')
+            action, data = event.message.text.split(',')
             if action == '搜尋':
-                result = DOWNLOADER.search(name)
+                result = DOWNLOADER.search(data)
                 if result == None :
                     line_bot_api.reply_message(
                         event.reply_token,
                         TextSendMessage(text='NONO')
                     )
                 else:
-                    temp =  json.load(open('./templete.json','r',encoding='utf-8'))
-                    temp['body']['contents'][0]['text'] = name
+                    temp =  json.load(open(LINE_BOT_TEMPLATE_FILE_PATH,'r',encoding='utf-8'))
+                    temp['body']['contents'][0]['text'] = data
                     for metadata in result:
                         opt =  {
                             "type": "button",
@@ -94,15 +93,15 @@ def echo(event):
                         }
                         temp['footer']['contents'].append(opt)
                     FlexMessage = temp
-                    line_bot_api.reply_message(event.reply_token,FlexSendMessage(name, FlexMessage))
+                    line_bot_api.reply_message(event.reply_token,FlexSendMessage(data, FlexMessage))
             elif action == '下載':
-                novel_name, novel_idx, source_idx = name.split('&')
+                novel_name, novel_idx, source_idx = data.split('&')
                 DOWNLOADER.download(create_metadata(novel_name, novel_idx, source_idx))
                 # Success
-                if translate_and_convert_novel("./tmp/novel.txt", novel_name):
+                if translate_and_convert_novel(novel_name):
                     # upload file
                     file_name = "{}.epub".format(novel_name)
-                    link = upload(filename=file_name, local_file_path=os.path.join('./output',file_name))
+                    link = upload(filename=file_name, local_file_path=get_OUTPUT_PATH(novel_name))
                     line_bot_api.reply_message(event.reply_token,TextSendMessage(text =link))
                 # Fail
                 else:

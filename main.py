@@ -6,7 +6,7 @@ from tkinter.scrolledtext import ScrolledText
 
 from utils.convert import simple2Trad, create_ebook, read_file
 from utils.download import Downloader
-from utils.config import TMP_DIRECTORY, TMP_TXT_PATH, reset_TMP_DIRECTORY, OUTPUT_DIRECTORY
+from utils.config import TMP_DIRECTORY, TMP_TXT_PATH, reset_TMP_DIRECTORY, get_OUTPUT_PATH
 import os
 import subprocess
 
@@ -40,10 +40,6 @@ s.configure('normal.TButton', font=('courier', 14, 'normal'))
 s.configure('normal.TCheckbutton', font=('courier', 12, 'normal'))
 lableFrame_font = ('courier', 14, 'normal')
 
-def get_output_path(novel_name:str):
-    output_file_name = novel_name + '.epub'
-    return os.path.join(OUTPUT_DIRECTORY, output_file_name)
-    
 def clear_text_var(var):
     if var.get("1.0","end-1c") != '':
         var.delete("1.0","end")
@@ -82,7 +78,7 @@ def select_files():
     book_name = os.path.basename(file_name).split('.')[0]
     book_name = simple2Trad(book_name)
     # Set output path
-    output_name_var.set(get_output_path(book_name))
+    output_name_var.set(get_OUTPUT_PATH(book_name))
     # Enable the convert button
     convert_btn['state'] = 'normal'
 
@@ -141,7 +137,7 @@ def select_novel():
     download_and_convert_btn['state'] = 'normal' # Enable convert button
     # Set output name
     novel_name = NOVEL_METADATA[selected_idx]['novel_name']
-    output_name_var.set(get_output_path(novel_name))
+    output_name_var.set(get_OUTPUT_PATH(novel_name))
 
 def download_and_convert_novel():
     global NOVEL_METADATA, FILE_PATH
