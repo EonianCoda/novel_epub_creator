@@ -211,15 +211,15 @@ class Qiuyewx_downloader(object):
         if results == []:
             return None
 
-        novel_lists = []
+        novels_metadata = []
         for result in results:
             result = result.find('div',class_="book_info").find('a')
             novel_name = result.text
             url = result.get('href')
             novel_idx = url.split('/')[-1].split('.')[0]
-            novel_lists.append([simple2Trad(novel_name), novel_idx])
+            novels_metadata.append(create_metadata(simple2Trad(novel_name), novel_idx))
 
-        return novel_lists
+        return novels_metadata
 
     def download(self, metadata:dict):
         # Get download link
@@ -252,8 +252,6 @@ class Xsla_downloader(object):
         
         results = soup.find_all('li',class_="storelistbt5a")
         novels_metadata = []
-        
-
         for result in results:
             result = result.find('a',class_="bookname")
             novel_name = simple2Trad(result.text.split('》')[0][1:])
