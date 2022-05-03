@@ -64,7 +64,9 @@ def create_metadata(novel_name:str, novel_idx:int, source_idx:int=None):
         novel_name: the name of the novel
         novel_idx: the index of the novel
     """
-    return {'novel_name':novel_name, 'novel_idx':int(novel_idx), 'source_idx':int(source_idx)}
+    if source_idx != None:
+        source_idx = int(source_idx)
+    return {'novel_name':novel_name, 'novel_idx':int(novel_idx), 'source_idx':source_idx}
 
 class Downloader(object):
     def __init__(self, search_all_source=False):
@@ -99,7 +101,7 @@ class Zxcs_downloader(object):
     """Download novel from websit: http://zxcs.me/
     """
     def __init__(self):
-        self.base_url = "http://zxcs.me/index.php?keyword={}"
+        self.base_url = "http://zxcs.me/index.php?keyword={}&page={}"
         self.search_url = lambda key, p : encode_chinese(self.base_url.format(T2S.convert(key),p))
 
     def search_page(self, key_word:str, page=1):
