@@ -39,10 +39,10 @@ def extract_and_move_file():
     files = os.listdir(TMP_DIRECTORY)
     shutil.move(os.path.join(TMP_DIRECTORY, files[0]), TMP_TXT_PATH)
 
-def encode_chinese(data, is_post_data=False):
+def encode_chinese(data, is_post_data=False, encoding="utf-8"):
     # is post data
     if is_post_data:
-        return parse.urlencode(data).encode()
+        return parse.urlencode(data, encoding=encoding).encode()
     # is url
     else:
         return quote(data, safe=string.printable)
