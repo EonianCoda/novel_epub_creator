@@ -171,7 +171,7 @@ class Ijjxsw_downloader(object):
         soup = open_url(self.search_url, post_data=post_data)
 
         results = soup.find_all('div',class_="list_a")
-        if results == None:
+        if results == []:
             return None
         
         results = [element.find_all('a')[1] for element in results]
@@ -208,7 +208,7 @@ class Qiuyewx_downloader(object):
         soup = open_url(self.search_url, post_data=post_data)
 
         results = soup.find_all('div', class_="zhuopin")
-        if results == None:
+        if results == []:
             return None
 
         novel_lists = []
