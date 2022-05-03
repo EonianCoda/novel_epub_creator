@@ -2,12 +2,16 @@ from __future__ import print_function
 
 import os.path
 
+from utils.config import get_OUTPUT_PATH
+
 from google.auth.transport.requests import Request
 from google.oauth2.credentials import Credentials
 from google_auth_oauthlib.flow import InstalledAppFlow
 from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
 from googleapiclient.http import MediaFileUpload, MediaIoBaseDownload
+
+
 # If modifying these scopes, delete the file token.json.
 SCOPES = ['https://www.googleapis.com/auth/drive']
 def search_folder(service, update_drive_folder_name=None):
@@ -117,5 +121,5 @@ def upload(filename,local_file_path):
         print(f'An error occurred: {error}')
 if __name__ =='__main__':
     name = str(29295)
-    print(upload(filename=name+'.epub',local_file_path= './output/'+name+'.epub'))
+    print(upload(filename=name+'.epub',local_file_path= get_OUTPUT_PATH(name)))
 

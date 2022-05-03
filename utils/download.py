@@ -4,14 +4,10 @@ from urllib import parse
 import os, shutil, string
 
 from bs4 import BeautifulSoup
-from opencc import OpenCC
 import patoolib
 
 from utils.config import TMP_DIRECTORY, TMP_TXT_PATH, TMP_RAR_PATH, reset_TMP_DIRECTORY
-
-T2S = OpenCC('t2s') # Tradtional to Simple
-S2T = OpenCC('s2twp') # Simple to Traditional
-
+from utils.convert import simple2Trad, Trad2simple
 
 def open_url(url, decode=True, encoding='utf-8',post_data=None):
     """
@@ -100,7 +96,7 @@ class Zxcs_downloader(object):
     """
     def __init__(self):
         self.base_url = "http://zxcs.me/index.php?keyword={}&page={}"
-        self.search_url = lambda key, p : encode_chinese(self.base_url.format(T2S.convert(key),p))
+        self.search_url = lambda key, p : encode_chinese(self.base_url.format(Trad2simple(key),p))
 
     def search_page(self, key_word:str, page=1):
         """Search novel with key word for one page
@@ -117,7 +113,7 @@ class Zxcs_downloader(object):
         novels_metadata = []
         for l in link_list:
             novel_name = l.text.split('》')[0][1:]
-            novel_name = S2T.convert(novel_name)
+            novel_name = simple2Trad(novel_name)
             url = l.get('href')
             novel_idx = url.split('/')[-1]
             novels_metadata.append(create_metadata(novel_name, novel_idx))
@@ -164,7 +160,7 @@ class Ijjxsw_downloader(object):
         self.search_url = self.base_url + 'search/'
 
     def search(self, key_word:str):
-        post_data = {'searchkey' : T2S.convert(key_word)}
+        post_data = {'searchkey' : Trad2simple(key_word)}
         post_data = encode_chinese(post_data, is_post_data=True)
         soup = open_url(self.search_url, post_data=post_data)
 
@@ -175,7 +171,7 @@ class Ijjxsw_downloader(object):
         results = [element.find_all('a')[1] for element in results]
         novels_metadata = []
         for result in results:
-            novel_name = S2T.convert(result.text)
+            novel_name = simple2Trad(result.text)
             url = result.get('href')
             novel_idx = url.split('/')[-1].split('.')[0]
             novels_metadata.append(create_metadata(novel_name, novel_idx))
@@ -184,7 +180,7 @@ class Ijjxsw_downloader(object):
     def download(self, metadata:dict):
         # Get download link
         novel_name, novel_idx = metadata['novel_name'], metadata['novel_idx']
-        novel_name = T2S.convert(novel_name)
+        novel_name = Trad2simple(novel_name)
 
         download_url = "https://m.ijjxsw.co/api/txt_down.php?articleid={}&amp;articlename={}".format(novel_idx, novel_name)
         download_url = encode_chinese(download_url)

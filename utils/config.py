@@ -1,4 +1,9 @@
 import os, shutil
+### General file process function
+def delete_if_exist(file_path:str):
+    if os.path.exists(file_path):
+        os.remove(file_path)
+
 ### File path ###
 TMP_TXT_PATH = ".\\.tmp\\novel.txt"
 TMP_RAR_PATH = "tmp.rar"

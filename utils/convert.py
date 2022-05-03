@@ -16,6 +16,15 @@ def simple2Trad(content:str):
     content = cc.convert(content)
     return content
 
+def Trad2simple(content:str):
+    """Translate tradtional Chinese to Simplified Chinese
+    Args:
+        content: str, string for converted
+    """
+    cc = OpenCC('t2s')
+    content = cc.convert(content)
+    return content
+
 def read_file(file_name:str):
     """Read file
     """

@@ -1,5 +1,5 @@
 import os
-from config import *
+from utils.config import *
 import pickle
 ##TODO
 class Database(object):

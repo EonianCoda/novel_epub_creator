@@ -6,9 +6,9 @@ from tkinter.scrolledtext import ScrolledText
 
 from utils.convert import simple2Trad, create_ebook, read_file
 from utils.download import Downloader
-from utils.config import TMP_DIRECTORY, TMP_TXT_PATH, reset_TMP_DIRECTORY, get_OUTPUT_PATH
+from utils.config import TMP_RAR_PATH, TMP_TXT_PATH, reset_TMP_DIRECTORY, get_OUTPUT_PATH, delete_if_exist
+from utils.tkinter import clear_text_var, open_explorer, create_label_frame
 import os
-import subprocess
 
 
 ERROR_MESSAGE = {'read_error':lambda : showinfo(title="錯誤",message="無法解析此檔案編碼"),
@@ -24,7 +24,8 @@ win = tk.Tk()
 win.title('Ebook Creator')
 win.resizable(False, False)
 win.geometry('1000x920')
-### Variable ###
+
+### TK Variable ###
 # For tab1
 file_path_var = StringVar()
 encoding_var = StringVar()
@@ -33,35 +34,25 @@ open_explorer_var =  tk.BooleanVar()
 # For tab2
 search_var = StringVar()
 selected_novel_var = tk.StringVar()
-# output_name_var_tab2 = tk.StringVar()
+
 ### Set Style ###
 s = ttk.Style() 
 s.configure('normal.TButton', font=('courier', 14, 'normal'))
 s.configure('normal.TCheckbutton', font=('courier', 12, 'normal'))
 lableFrame_font = ('courier', 14, 'normal')
 
-def clear_text_var(var):
-    if var.get("1.0","end-1c") != '':
-        var.delete("1.0","end")
-
 def convert_txt():
     global FILE_PATH
-
     content = read_file(FILE_PATH)
     # Read fail
     if content == None:
         return False
-
     content = simple2Trad(content)
     # Write temp file
     reset_TMP_DIRECTORY()
     with open(TMP_TXT_PATH, "w", encoding="utf-8") as f:
         f.write(content)
     return True
-
-def open_explorer(path):
-    if open_explorer_var.get():
-        subprocess.Popen('explorer "{}"'.format(path))
 
 def select_files():
     global FILE_PATH
@@ -96,15 +87,11 @@ def convert2epub():
     showinfo(title="訊息",message="轉換成功")
     
     # Open explorer
-    path = os.path.dirname(output_name_var.get())
-    if path == '':
-        path = '.'
-    open_explorer(path)
-
-def create_label_frame(text:str, parent):
-    l = ttk.Label(text=text, font=lableFrame_font)
-    frame = ttk.LabelFrame(parent, labelwidget=l)
-    return frame
+    if open_explorer_var.get() == True:
+        path = os.path.dirname(output_name_var.get())
+        if path == '':
+            path = '.'
+        open_explorer(path)
 
 def search_novel():
     global NOVEL_METADATA, DOWNLOADER
@@ -147,6 +134,8 @@ def download_and_convert_novel():
     DOWNLOADER.download(NOVEL_METADATA[selected_idx])
     FILE_PATH = TMP_TXT_PATH # set global file path for function convert2epub
     convert2epub()
+    if NOVEL_METADATA[selected_idx]['source_idx'] == 0:
+        delete_if_exist(TMP_RAR_PATH)
 
 
 ### Control ###
