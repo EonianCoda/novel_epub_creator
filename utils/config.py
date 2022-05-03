@@ -24,7 +24,8 @@ LINE_BOT_TEMPLATE_FILE_PATH = "'./templates/template.json'"
 
 ### For convert ###
 MAX_CHAPTER_NAME_LEN = 35
-
+MIN_FIND_NOVELS = 15
+MAX_FIND_NOVELS_IF_NOT_MATCH = 30
 
 ### Databse variable ###
 SEARCH_RESULTS_PICKLE = "./database/search_results.pickle"

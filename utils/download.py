@@ -7,7 +7,7 @@ import os, shutil, string, glob
 from bs4 import BeautifulSoup
 import patoolib
 
-from utils.config import TMP_DIRECTORY, TMP_TXT_PATH, TMP_RAR_PATH, TMP_ZIP_PATH, reset_TMP_DIRECTORY
+from utils.config import MIN_FIND_NOVELS, MAX_FIND_NOVELS_IF_NOT_MATCH, TMP_DIRECTORY, TMP_TXT_PATH, TMP_RAR_PATH, TMP_ZIP_PATH, reset_TMP_DIRECTORY
 from utils.convert import simple2Trad, Trad2simple
 
 def open_url(url, decode=True, encoding='utf-8', post_data=None, return_response=False):
@@ -70,10 +70,17 @@ def create_metadata(novel_name:str, novel_idx:int, source_idx:int=None):
                 'source_idx': source_idx}
     return metadata
 
+def all_match(metadatas:list, keyword:str):
+    for metadata in metadatas:
+        if keyword == metadata['novel_name']:
+            return True
+    return False
+
 class Downloader(object):
     def __init__(self, search_all_source=False):
         self.downloader = [Zxcs_downloader(),     # 知軒藏書
-                            Ijjxsw_downloader(),  # 久久小說下載網
+                            Mijjxswco_downloader(),  # 久久小說下載網
+                            Ijjxs_downloader(), # 愛久久小說下載網
                             Qiuyewx_downloader(), # 平板电子书网
                             Qinkan_downloader(),  # 請看小說網
                             Xsla_downloader(), ]  # 八零电子书 (Too slow)
@@ -83,19 +90,24 @@ class Downloader(object):
         Returns:
             source_idx, novel_dict
         """
-        novels_metadatas = []
+        novels_metadata = []
         for source_idx, downloader in enumerate(self.downloader):
-            novels_metadata = downloader.search(key_word)
-            if novels_metadata != None:
-                for metadata in novels_metadata:
+            metadatas = downloader.search(key_word)
+            if metadatas != None:
+                for metadata in metadatas:
                     metadata['source_idx'] = source_idx
-                novels_metadatas.extend(novels_metadata)
-                # If get results, then return
-                if self.search_all_source == False:
-                    return novels_metadatas
+                novels_metadata.extend(metadatas)
 
-        if len(novels_metadatas) != 0:
-            return novels_metadatas
+                # If get results, then return
+                cond = len(novels_metadata) >= MAX_FIND_NOVELS_IF_NOT_MATCH
+
+                # print(cond, (self.search_all_source == False and len(novels_metadata) >= MIN_FIND_NOVELS), all_match(novels_metadata, key_word))
+                if cond or (self.search_all_source == False and len(novels_metadata) >= MIN_FIND_NOVELS) or all_match(novels_metadata, key_word):
+                    # print("return")
+                    return novels_metadata
+
+        if len(novels_metadata) != 0:
+            return novels_metadata
         else:
             return None
     def download(self, metadata:dict):
@@ -163,7 +175,45 @@ class Zxcs_downloader(object):
         download_file(file_url, TMP_RAR_PATH)
         extract_and_move_file()
 
-class Ijjxsw_downloader(object):
+class Ijjxs_downloader(object):
+    """Download novel from websit: https://www.ijjxs.com/
+    """
+    def __init__(self):
+        self.base_url = "https://www.ijjxs.com"
+        self.search_url = self.base_url + '/e/search/index.php'
+
+    def search(self, key_word:str):
+        post_data = {'keyboard':Trad2simple(key_word),'show':'title,writer'}
+        post_data = encode_chinese(post_data, is_post_data=True)
+        soup = open_url(self.search_url, post_data=post_data)
+
+        results = soup.find_all('a',class_='searchtitle')
+        if results == []:
+            return None
+        novels_metadata = []
+        for result in results:
+            novel_name = result.text
+            url = result.get('href')
+            novel_idx = url.split('/')[-1].split('.')[0]
+            novels_metadata.append(create_metadata(novel_name, novel_idx))
+
+        return novels_metadata
+
+    def download(self, metadata:dict):
+        # Get download link
+        novel_name, novel_idx = metadata['novel_name'], metadata['novel_idx']
+        novel_name = Trad2simple(novel_name)
+        download_url = "https://www.ijjxs.com/txt/{}.html".format(novel_idx)
+        soup = open_url(download_url)
+        download_url = soup.find('li', class_="downAddress_li").find('a').get('href')
+        download_url = "https://www.ijjxs.com" + download_url
+        soup = open_url(download_url)
+
+        # Download txt
+        download_url = "https://www.ijjxs.com" + soup.find('a',class_="strong green").get('href')
+        download_file(download_url, TMP_TXT_PATH)
+
+class Mijjxswco_downloader(object):
     """Download novel from websit: https://m.ijjxsw.co/
     """
     def __init__(self):
@@ -267,6 +317,11 @@ class Qinkan_downloader(object):
         response = open_url(self.search_url, post_data=post_data, return_response=True)
         # Get response url for anther page
         url = response.geturl()
+
+        # Search fail
+        if "index.php" in url:
+            return None
+
         soup = BeautifulSoup(response.read().decode('gb18030'), 'html.parser')
         results = soup.find('div', class_="listBoxs").find('ul').find_all('li')
         if results == []:
