@@ -1,12 +1,12 @@
 from urllib.request import urlopen, Request
 from urllib.parse import quote
 from urllib import parse
-import os, shutil, string
+import os, shutil, string, glob
 
 from bs4 import BeautifulSoup
 import patoolib
 
-from utils.config import TMP_DIRECTORY, TMP_TXT_PATH, TMP_RAR_PATH, reset_TMP_DIRECTORY
+from utils.config import TMP_DIRECTORY, TMP_TXT_PATH, TMP_RAR_PATH, TMP_ZIP_PATH, reset_TMP_DIRECTORY
 from utils.convert import simple2Trad, Trad2simple
 
 def open_url(url, decode=True, encoding='utf-8',post_data=None):
@@ -33,9 +33,14 @@ def download_file(url, output_path:str):
     with open(output_path, 'wb') as f:
         f.write(file)
 
-def extract_and_move_file():
+def extract_and_move_file(is_rar=True):
     reset_TMP_DIRECTORY()
-    patoolib.extract_archive(TMP_RAR_PATH, outdir=TMP_DIRECTORY)
+    if is_rar:
+        file_path = TMP_RAR_PATH
+    else:
+        file_path = TMP_ZIP_PATH
+
+    patoolib.extract_archive(file_path, outdir=TMP_DIRECTORY)
     files = os.listdir(TMP_DIRECTORY)
     shutil.move(os.path.join(TMP_DIRECTORY, files[0]), TMP_TXT_PATH)
 
@@ -65,7 +70,8 @@ class Downloader(object):
     def __init__(self, search_all_source=False):
         self.downloader = [Zxcs_downloader(),     # 知軒藏書
                             Ijjxsw_downloader(),  # 久久小說下載網
-                            Qiuyewx_downloader()] # 平板电子书网
+                            Qiuyewx_downloader(), # 平板电子书网
+                            Xsla_downloader(), ]  # 八零电子书 (Too slow)
         self.search_all_source = search_all_source
     def search(self, key_word:str):
         """Search novel by key word
@@ -226,3 +232,43 @@ class Qiuyewx_downloader(object):
         # Download txt
         reset_TMP_DIRECTORY()
         download_file(download_url, TMP_TXT_PATH)
+
+
+class Xsla_downloader(object):
+    """Download novel from websit:https://www.80xs.la/
+    """
+    def __init__(self):
+        self.base_url = "https://www.80xs.la/"
+        self.search_url = self.base_url + 'modules/article/search.php'
+
+    def search(self, key_word:str):
+        post_data = {'searchkey' : Trad2simple(key_word)}
+        post_data = encode_chinese(post_data, is_post_data=True)
+        soup = open_url(self.search_url, post_data=post_data)
+
+        results = soup.find_all('div',class_="list_a")
+        if results == []:
+            return None
+        
+        results = soup.find_all('li',class_="storelistbt5a")
+        novels_metadata = []
+        
+
+        for result in results:
+            result = result.find('a',class_="bookname")
+            novel_name = simple2Trad(result.text.split('》')[0][1:])
+            url = result.get('href')
+            novel_idx = url.split('/')[-1].split('.')[0]
+            novels_metadata.append(create_metadata(novel_name, novel_idx))
+            
+        return novels_metadata
+    def download(self, metadata:dict):
+        # Get download link
+        novel_name, novel_idx = metadata['novel_name'], metadata['novel_idx']
+        novel_name = Trad2simple(novel_name)
+        download_url = "https://dz.80xs.la/{}/{}.zip".format(novel_idx, novel_name)
+        download_url = encode_chinese(download_url)
+
+        # Download txt
+        download_file(download_url, TMP_ZIP_PATH)
+        extract_and_move_file(is_rar=False)

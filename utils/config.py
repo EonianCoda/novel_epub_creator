@@ -7,6 +7,7 @@ def delete_if_exist(file_path:str):
 ### File path ###
 TMP_TXT_PATH = ".\\.tmp\\novel.txt"
 TMP_RAR_PATH = "tmp.rar"
+TMP_ZIP_PATH = "tmp.zip"
 TMP_DIRECTORY = ".\\.tmp"
 OUTPUT_DIRECTORY = '.\\output'
 
