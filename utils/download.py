@@ -27,8 +27,7 @@ def open_url(url, decode=True, encoding='utf-8',post_data=None):
         return content
     else:
         return BeautifulSoup(content.decode(encoding), 'html.parser')
-        
-    
+
 def download_file(url, output_path:str):
     file = open_url(url, decode=False)
     with open(output_path, 'wb') as f:
@@ -64,8 +63,9 @@ def create_metadata(novel_name:str, novel_idx:int, source_idx:int=None):
 
 class Downloader(object):
     def __init__(self, search_all_source=False):
-        self.downloader = [Zxcs_downloader(), 
-                            Ijjxsw_downloader()]
+        self.downloader = [Zxcs_downloader(),     # 知軒藏書
+                            Ijjxsw_downloader(),  # 久久小說下載網
+                            Qiuyewx_downloader()] # 平板电子书网
         self.search_all_source = search_all_source
     def search(self, key_word:str):
         """Search novel by key word
@@ -183,6 +183,44 @@ class Ijjxsw_downloader(object):
         novel_name = Trad2simple(novel_name)
 
         download_url = "https://m.ijjxsw.co/api/txt_down.php?articleid={}&amp;articlename={}".format(novel_idx, novel_name)
+        download_url = encode_chinese(download_url)
+
+        # Download txt
+        reset_TMP_DIRECTORY()
+        download_file(download_url, TMP_TXT_PATH)
+
+class Qiuyewx_downloader(object):
+    """Download novel from websit: https://www.qiuyewx.com/
+    """
+    def __init__(self):
+        self.base_url = "https://www.qiuyewx.com/"
+        self.search_url = self.base_url + 'modules/article/search.php'
+
+    def search(self, key_word:str):
+        post_data = {'searchkey':Trad2simple(key_word)}
+        post_data = encode_chinese(post_data, is_post_data=True)
+        soup = open_url(self.search_url, post_data=post_data)
+
+        results = soup.find_all('div', class_="zhuopin")
+        if results == None:
+            return None
+
+        novel_lists = []
+        for result in results:
+            result = result.find('div',class_="book_info").find('a')
+            novel_name = result.text
+            url = result.get('href')
+            novel_idx = url.split('/')[-1].split('.')[0]
+            novel_lists.append([simple2Trad(novel_name), novel_idx])
+
+        return novel_lists
+
+    def download(self, metadata:dict):
+        # Get download link
+        novel_name, novel_idx = metadata['novel_name'], metadata['novel_idx']
+        novel_name = Trad2simple(novel_name)
+
+        download_url = "https://txt.qiuyewx.com/zip/{}/{}.txt".format(novel_idx, novel_name)
         download_url = encode_chinese(download_url)
 
         # Download txt
