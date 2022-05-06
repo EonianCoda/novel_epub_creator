@@ -225,6 +225,7 @@ class Ijjxs_downloader(object):
 
         # Download txt
         download_url = "https://www.ijjxs.com" + soup.find('a',class_="strong green").get('href')
+        reset_TMP_DIRECTORY()
         download_file(download_url, TMP_TXT_PATH)
 
 class Mijjxswco_downloader(object):

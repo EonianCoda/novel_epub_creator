@@ -9,8 +9,6 @@ DOWNLOADER = Downloader()
 client = discord.Client()
 config = configparser.ConfigParser()
 config.read('config.ini')
-# def get_index(m):
-#     return m.content == '你好' and m.channel == channel
 @client.event
 async def on_ready():
     print('目前登入身份：',client.user)
