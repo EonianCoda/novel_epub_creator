@@ -5,10 +5,10 @@ def delete_if_exist(file_path:str):
         os.remove(file_path)
 
 ### File path ###
-TMP_TXT_PATH = ".\\.tmp\\novel.txt"
+TMP_TXT_PATH = ".\\tmp\\novel.txt"
 TMP_RAR_PATH = "tmp.rar"
 TMP_ZIP_PATH = "tmp.zip"
-TMP_DIRECTORY = ".\\.tmp"
+TMP_DIRECTORY = ".\\tmp"
 OUTPUT_DIRECTORY = '.\\output'
 
 def reset_TMP_DIRECTORY():

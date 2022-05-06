@@ -63,18 +63,19 @@ def update_file(service, update_drive_service_name, local_file_path, update_driv
     print('檔案大小為: ' + str(file_metadata_size) + ' byte')
     return file_metadata['name'], file_id['id']
 def get_creds():
+    creds = None
     if os.path.exists('token.json'):
-        creds = Credentials.from_authorized_user_file('token.json', SCOPES)
+        creds = Credentials.from_authorized_user_file('./token.json', SCOPES)
     # If there are no (valid) credentials available, let the user log in.
     if not creds or not creds.valid:
         if creds and creds.expired and creds.refresh_token:
             creds.refresh(Request())
         else:
             flow = InstalledAppFlow.from_client_secrets_file(
-                'credentials.json', SCOPES)
+                './credentials.json', SCOPES)
             creds = flow.run_local_server(port=0)
         # Save the credentials for the next run
-        with open('token.json', 'w') as token:
+        with open('./token.json', 'w') as token:
             token.write(creds.to_json())
     return creds
 def get_file_list(service):
