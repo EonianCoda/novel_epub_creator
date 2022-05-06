@@ -3,10 +3,15 @@ import re, os
 from utils.ebook import Ebook
 from utils.config import MAX_CHAPTER_NAME_LEN
 
-FINDS = [u'第(\d)+[章卷]',
-        '第[一二三四五六七八九十千百零兩]+[章卷]',
+FINDS = [u'第(\d)+[章卷話]',
+        '第[一二三四五六七八九十千百零兩]+[章卷話]',
         '序章']
 
+def translate_and_convert(input_path:str, output_path:str):
+    content = read_file(input_path)
+    content = simple2Trad(content)
+    lines = content.splitlines(True)
+    return create_ebook(lines, output_path)
 def simple2Trad(content:str):
     """Translate Simplified Chinese to tradtional Chinese
     Args:

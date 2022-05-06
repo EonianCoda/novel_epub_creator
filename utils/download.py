@@ -1,8 +1,9 @@
 import re
 from urllib.request import urlopen, Request
 from urllib.parse import quote
-from urllib import parse, response
+from urllib import parse
 import os, shutil, string, glob
+from fake_useragent import UserAgent
 
 from bs4 import BeautifulSoup
 import patoolib
@@ -17,7 +18,8 @@ def open_url(url, decode=True, encoding='utf-8', post_data=None, return_response
         decode: boolean, whether decode the html
     Return: if decode is True, then return BeautifulSoup, else return bytes
     """
-    headers={'User-Agent':'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:60.0) Gecko/20100101 Firefox/60.0'}
+    
+    headers={'User-Agent':UserAgent().chrome}
     request = Request(url, headers=headers, data=post_data)
 
     # decode html for search
@@ -30,7 +32,19 @@ def open_url(url, decode=True, encoding='utf-8', post_data=None, return_response
     if not decode:
         return content
     else:
-        return BeautifulSoup(content.decode(encoding), 'html.parser')
+        encoding = response.headers.get_content_charset()
+        if encoding != None:
+            return BeautifulSoup(content.decode(encoding), 'html.parser')
+        encodings = ['utf-8','gb2312','gb18030']
+        for encoding in encodings:
+            try:
+                html = content.decode(encoding)
+                return BeautifulSoup(html, 'html.parser')
+            except UnicodeDecodeError:
+                continue
+        html = content.decode('gb18030','ignore')
+        return BeautifulSoup(html, 'html.parser') 
+        # raise ValueError("Some Error in open_url")
 
 def download_file(url, output_path:str):
     file = open_url(url, decode=False)
