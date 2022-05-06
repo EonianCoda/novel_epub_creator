@@ -5,6 +5,7 @@ build
 dist
 .vscode
 .tmp
+.keys
 ### File ###
 tmp*
 crawler*.py
@@ -14,6 +15,4 @@ test.txt
 *.ipynb
 *.exe
 ### Keys ###
-config.ini
-credentials.json
-token.json
+

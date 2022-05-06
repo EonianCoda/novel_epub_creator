@@ -5,10 +5,9 @@ from utils.convert import read_file, simple2Trad, create_ebook,translate_and_con
 from utils.config import TMP_TXT_PATH, LINE_BOT_TEMPLATE_FILE_PATH, get_OUTPUT_PATH
 from utils.google_drive import upload
 DOWNLOADER = Downloader()
-
 client = discord.Client()
 config = configparser.ConfigParser()
-config.read('config.ini')
+config.read('./.keys/config.ini')
 @client.event
 async def on_ready():
     print('目前登入身份：',client.user)
@@ -43,4 +42,5 @@ async def on_message(message):
                 file_name = "{}.epub".format(novel_name)
                 link = upload(filename=file_name, local_file_path=get_OUTPUT_PATH(novel_name))
             await channel.send('{}連結:{}'.format(novel_name,link))
+            
 client.run(config.get('discord-bot', 'TOKEN'))

@@ -9,8 +9,7 @@ TMP_TXT_PATH = ".\\.tmp\\novel.txt"
 TMP_RAR_PATH = "tmp.rar"
 TMP_ZIP_PATH = "tmp.zip"
 TMP_DIRECTORY = ".\\.tmp"
-OUTPUT_DIRECTORY = '.\\output'
-
+OUTPUT_DIRECTORY = '.\\output' 
 def reset_TMP_DIRECTORY():
     if os.path.exists(TMP_DIRECTORY):
         shutil.rmtree(TMP_DIRECTORY)
