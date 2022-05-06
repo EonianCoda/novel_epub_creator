@@ -4,6 +4,7 @@ from utils.download import Downloader, create_metadata
 from utils.convert import read_file, simple2Trad, create_ebook,translate_and_convert
 from utils.config import TMP_TXT_PATH, LINE_BOT_TEMPLATE_FILE_PATH, get_OUTPUT_PATH
 from utils.google_drive import upload
+from utils.config import WEB_NAME
 DOWNLOADER = Downloader()
 client = discord.Client()
 config = configparser.ConfigParser()
@@ -27,7 +28,7 @@ async def on_message(message):
         if result == None :
             await channel.send("搜尋不到此小說!!")
         else:
-            name = [[i['novel_name'],i['source_idx']] for i in result]
+            name = [[i['novel_name'],WEB_NAME[i['source_idx']]] for i in result]
             await channel.send('\n'.join(str(i) for i in name))
             await channel.send('要下載哪一個?')
             # def check(m):
@@ -42,5 +43,5 @@ async def on_message(message):
                 file_name = "{}.epub".format(novel_name)
                 link = upload(filename=file_name, local_file_path=get_OUTPUT_PATH(novel_name))
             await channel.send('{}連結:{}'.format(novel_name,link))
-            
+
 client.run(config.get('discord-bot', 'TOKEN'))
