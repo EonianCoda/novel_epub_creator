@@ -1,8 +1,6 @@
 # Bug 
 1. encode找到的download網址 (好像不是這個問題)
-2. 知軒藏書：載點1掛掉時，採用載點2
-3. 選取書後去改輸出檔名有bug：解決方案，當使用者點選確定選取時，用全域變數紀錄
-4. 刪除open_url的參數encoding
+2. 刪除open_url的參數encoding
 
 # 新增下載來源
 1. 輕小說文庫
@@ -12,9 +10,7 @@
 1. 顯示作者與簡介，方便使用者選到正確的小說
 2. google drive上傳
 3. 中國網路小說/輕小說 選擇
-4. 讀取rar,zip轉換
 5. 搜尋google drive已有檔案
-6. 搜尋所有來源，並標註來源n
 7. discord button
 8. database
 
@@ -26,8 +22,6 @@
 
 # 潛在問題
 1. main.py: tab1,tab2共用相同變數output_name
-2. app.py: book_dict是全域變數，當複數使用者使用時，會導致錯誤
-3. app.py: 使用不同載點時，使用全域變數紀錄
-4. downloader_utils.py: 若小說名稱相同時，使用dict紀錄會導致錯誤
+2. app.py: 使用不同載點時，使用全域變數紀錄
 ## 複數使用者造成的問題
 5. utils.download: 複數使用者下載檔案時，由於將檔案都放置於tmp下，可能會產生問題

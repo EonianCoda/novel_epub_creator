@@ -1,4 +1,4 @@
-import re
+import urllib
 from urllib.request import urlopen, Request
 from urllib.parse import quote
 from urllib import parse
@@ -46,20 +46,21 @@ def open_url(url, decode=True, encoding='utf-8', post_data=None, return_response
         return BeautifulSoup(html, 'html.parser')
 
 def download_file(url, output_path:str):
+    if os.path.dirname(output_path) == TMP_DIRECTORY:
+        reset_TMP_DIRECTORY()
     file = open_url(url, decode=False)
     with open(output_path, 'wb') as f:
         f.write(file)
 
 def extract_and_move_file(is_rar=True):
-    reset_TMP_DIRECTORY()
     if is_rar:
         file_path = TMP_RAR_PATH
     else:
         file_path = TMP_ZIP_PATH
 
     patoolib.extract_archive(file_path, outdir=TMP_DIRECTORY)
-    files = os.listdir(TMP_DIRECTORY)
-    shutil.move(os.path.join(TMP_DIRECTORY, files[0]), TMP_TXT_PATH)
+    files = glob.glob(os.path.join(TMP_DIRECTORY,'*.txt'))
+    shutil.move(files[0], TMP_TXT_PATH)
 
 def encode_chinese(data, is_post_data=False, encoding="utf-8"):
     # is post data
@@ -114,9 +115,7 @@ class Downloader(object):
                 # If get results, then return
                 cond = len(novels_metadata) >= MAX_FIND_NOVELS_IF_NOT_MATCH
 
-                # print(cond, (self.search_all_source == False and len(novels_metadata) >= MIN_FIND_NOVELS), all_match(novels_metadata, key_word))
                 if cond or (self.search_all_source == False and len(novels_metadata) >= MIN_FIND_NOVELS) or all_match(novels_metadata, key_word):
-                    # print("return")
                     return novels_metadata
 
         if len(novels_metadata) != 0:
@@ -182,11 +181,22 @@ class Zxcs_downloader(object):
         download_url = "http://zxcs.me/download.php?id={}".format(novel_idx)
         soup = open_url(download_url)
         files = soup.find_all("span",class_="downfile")
-        file_url = files[0].find('a').get('href')
 
-        # Download rar
-        download_file(file_url, TMP_RAR_PATH)
-        extract_and_move_file()
+        flag = False
+        for file_url in files:
+            try:
+                file_url = file_url.find('a').get('href')
+                # Download rar
+                download_file(file_url, TMP_RAR_PATH)
+                extract_and_move_file()
+                flag = True
+                break
+            except urllib.error.URLError:
+                continue
+        if flag:
+            return True
+        else:
+            return False
 
 class Ijjxs_downloader(object):
     """Download novel from websit: https://www.ijjxs.com/
@@ -224,7 +234,6 @@ class Ijjxs_downloader(object):
 
         # Download txt
         download_url = "https://www.ijjxs.com" + soup.find('a',class_="strong green").get('href')
-        reset_TMP_DIRECTORY()
         download_file(download_url, TMP_TXT_PATH)
 
 class Mijjxswco_downloader(object):
@@ -261,7 +270,6 @@ class Mijjxswco_downloader(object):
         download_url = encode_chinese(download_url)
 
         # Download txt
-        reset_TMP_DIRECTORY()
         download_file(download_url, TMP_TXT_PATH)
 
 class Qiuyewx_downloader(object):
@@ -299,7 +307,6 @@ class Qiuyewx_downloader(object):
         download_url = encode_chinese(download_url)
 
         # Download txt
-        reset_TMP_DIRECTORY()
         download_file(download_url, TMP_TXT_PATH)
 
 class Qinkan_downloader(object):
@@ -367,7 +374,6 @@ class Qinkan_downloader(object):
         file_extension = download_url.split('.')[-1]
         download_url = encode_chinese(download_url)
         if file_extension == 'txt':
-            reset_TMP_DIRECTORY()
             download_file(download_url, TMP_TXT_PATH)
             return
         # Is rar or zip
@@ -377,7 +383,6 @@ class Qinkan_downloader(object):
             file_path = TMP_RAR_PATH
         # Extract and 
         download_file(download_url, file_path)
-        reset_TMP_DIRECTORY()
         patoolib.extract_archive(file_path, outdir=TMP_DIRECTORY)
         for file_path in glob.glob(os.path.join(TMP_DIRECTORY,'*.txt')):
             if novel_name in file_path:
@@ -418,6 +423,6 @@ class Xsla_downloader(object):
         download_url = "https://dz.80xs.la/{}/{}.zip".format(novel_idx, novel_name)
         download_url = encode_chinese(download_url)
 
-        # Download txt
+        # Download zip
         download_file(download_url, TMP_ZIP_PATH)
         extract_and_move_file(is_rar=False)
