@@ -3,9 +3,7 @@ output
 __pycache__
 build
 dist
-.vscode
-.tmp
-.keys
+.*
 ### File ###
 tmp*
 crawler*.py
