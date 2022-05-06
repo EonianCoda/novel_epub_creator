@@ -32,7 +32,6 @@ MIN_FIND_NOVELS = 15
 MAX_FIND_NOVELS_IF_NOT_MATCH = 30
 
 ### Databse variable ###
-SEARCH_RESULTS_PICKLE = "./database/search_results.pickle"
-DOWNLOAD_RESULTS_PICKLE = "./database/download_results.pickle"
-SEARCH_RESULTS_CSV = "./database/search_results.csv"
-DOWNLOAD_RESULTS_CSV = "./database/download_results.csv"
+DATABASE_DIRECTORY = "./.database"
+SEARCH_RESULTS_JSON = "./.database/search_results.json"
+DOWNLOAD_RESULTS_JSON = "./.database/download_results.json"

@@ -8,8 +8,10 @@ from fake_useragent import UserAgent
 from bs4 import BeautifulSoup
 import patoolib
 
+from utils.database import Database 
 from utils.config import MIN_FIND_NOVELS, MAX_FIND_NOVELS_IF_NOT_MATCH, TMP_DIRECTORY, TMP_TXT_PATH, TMP_RAR_PATH, TMP_ZIP_PATH, reset_TMP_DIRECTORY
 from utils.convert import simple2Trad, Trad2simple
+
 
 def open_url(url, decode=True, encoding='utf-8', post_data=None, return_response=False):
     """
@@ -91,7 +93,7 @@ def all_match(metadatas:list, keyword:str):
     return False
 
 class Downloader(object):
-    def __init__(self, search_all_source=False):
+    def __init__(self, search_all_source=False, use_database=True):
         self.downloader = [Zxcs_downloader(),     # 知軒藏書
                             Mijjxswco_downloader(),  # 久久小說下載網
                             Ijjxs_downloader(), # 愛久久小說下載網
@@ -99,12 +101,22 @@ class Downloader(object):
                             Qinkan_downloader(),  # 請看小說網
                             Xsla_downloader(), ]  # 八零电子书 (Too slow)
         self.search_all_source = search_all_source
+        self.use_database = use_database
+        if self.use_database:
+            self.database = Database()
     def search(self, key_word:str):
         """Search novel by key word
-        Returns:
+        Return:
             source_idx, novel_dict
         """
         novels_metadata = []
+
+        if self.use_database:
+            print(self.use_database)
+            result = self.database.get_search(key_word)
+            if result != None:
+                return result
+        
         for source_idx, downloader in enumerate(self.downloader):
             metadatas = downloader.search(key_word)
             if metadatas != None:
@@ -114,11 +126,14 @@ class Downloader(object):
 
                 # If get results, then return
                 cond = len(novels_metadata) >= MAX_FIND_NOVELS_IF_NOT_MATCH
-
                 if cond or (self.search_all_source == False and len(novels_metadata) >= MIN_FIND_NOVELS) or all_match(novels_metadata, key_word):
+                    if self.use_database:
+                        self.database.add_search(key_word, novels_metadata)
                     return novels_metadata
 
         if len(novels_metadata) != 0:
+            if self.use_database:
+                self.database.add_search(key_word, novels_metadata)
             return novels_metadata
         else:
             return None
