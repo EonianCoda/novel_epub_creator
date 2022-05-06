@@ -3,11 +3,16 @@ import os, shutil
 def delete_if_exist(file_path:str):
     if os.path.exists(file_path):
         os.remove(file_path)
+
+def is_compressed_file(file_path:str) -> bool:
+    file_extension = file_path.split('.')[-1]
+    return (file_extension == 'rar' or file_extension == 'zip')
+
 WEB_NAME = ['知軒藏書','久久小說下載網','愛久久小說下載網','平板電子書網','請看小說網','八零電子書']
 ### File path ###
 TMP_TXT_PATH = ".\\.tmp\\novel.txt"
-TMP_RAR_PATH = "tmp.rar"
-TMP_ZIP_PATH = "tmp.zip"
+TMP_RAR_PATH = ".\\.tmp\\tmp.rar"
+TMP_ZIP_PATH = ".\\.tmp\\tmp.zip"
 TMP_DIRECTORY = ".\\.tmp"
 OUTPUT_DIRECTORY = '.\\output' 
 def reset_TMP_DIRECTORY():

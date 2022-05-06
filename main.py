@@ -4,12 +4,12 @@ from tkinter import filedialog as fd
 from tkinter.messagebox import showinfo
 from tkinter.scrolledtext import ScrolledText
 
-from utils.convert import simple2Trad, create_ebook, read_file
+from utils.convert import simple2Trad, translate_and_convert
 from utils.download import Downloader
-from utils.config import TMP_RAR_PATH, TMP_TXT_PATH, reset_TMP_DIRECTORY, get_OUTPUT_PATH, delete_if_exist
+from utils.config import TMP_DIRECTORY, TMP_RAR_PATH, TMP_TXT_PATH, reset_TMP_DIRECTORY, get_OUTPUT_PATH, delete_if_exist, is_compressed_file
 from utils.tkinter import clear_text_var, open_explorer, create_label_frame
-import os
-
+import os, glob
+import patoolib
 
 ERROR_MESSAGE = {'read_error':lambda : showinfo(title="錯誤",message="無法解析此檔案編碼"),
                  'search_error':lambda : showinfo(title="訊息",message="找不到此小說"),
@@ -19,6 +19,7 @@ ERROR_MESSAGE = {'read_error':lambda : showinfo(title="錯誤",message="無法�
 FILE_PATH = ""
 NOVEL_METADATA = []
 DOWNLOADER = Downloader()
+SELECTED_IDX = -1
 # Windows
 win = tk.Tk()
 win.title('Ebook Creator')
@@ -31,6 +32,8 @@ file_path_var = StringVar()
 encoding_var = StringVar()
 output_name_var = StringVar()
 open_explorer_var =  tk.BooleanVar()
+auto_extract_var = tk.BooleanVar()
+auto_extract_var.set(True)
 # For tab2
 search_var = StringVar()
 selected_novel_var = tk.StringVar()
@@ -41,48 +44,60 @@ s.configure('normal.TButton', font=('courier', 14, 'normal'))
 s.configure('normal.TCheckbutton', font=('courier', 12, 'normal'))
 lableFrame_font = ('courier', 14, 'normal')
 
-def convert_txt():
+def extract_and_setpath(input_path:str):
+    """
+    """
     global FILE_PATH
-    content = read_file(FILE_PATH)
-    # Read fail
-    if content == None:
-        return False
-    content = simple2Trad(content)
-    # Write temp file
+    if not is_compressed_file(input_path):
+        raise ValueError(f"{input_path} is not rar or zip file !!")
     reset_TMP_DIRECTORY()
-    with open(TMP_TXT_PATH, "w", encoding="utf-8") as f:
-        f.write(content)
-    return True
+    patoolib.extract_archive(input_path, outdir=TMP_DIRECTORY)
+    files = glob.glob(os.path.join(TMP_DIRECTORY,'*.txt'))
+    FILE_PATH = files[0]
 
 def select_files():
     global FILE_PATH
-    filetypes = (('text files', '*.txt'),)
-    file_name = fd.askopenfilename(
+    filetypes = [('Accepted files', '*.txt'),
+                ('Accepted files', '*.rar'),
+                ('Accepted files', '*.zip'),
+                ('text files', '*.txt'),
+                ('compressed files','*.rar'),
+                ('compressed files','*.zip')]
+    file_path = fd.askopenfilename(
         title='Open files',
         initialdir='./',
         filetypes=filetypes)
 
-    # Update the file name
-    FILE_PATH = file_name
-    file_path_var.set(file_name)
-    # Get book name from file name
-    book_name = os.path.basename(file_name).split('.')[0]
+    # Cancell
+    if file_path == '':
+        return
+
+    file_path_var.set(file_path)
+    # File is rar or zip file
+    if auto_extract_var.get() == True and is_compressed_file(file_path):
+        extract_and_setpath(file_path)
+        book_name = os.path.basename(FILE_PATH).split('.')[0]
+    else:
+        # Update the file name
+        FILE_PATH = file_path
+        # Get book name from file name
+        book_name = os.path.basename(file_path).split('.')[0]
+
     book_name = simple2Trad(book_name)
     # Set output path
     output_name_var.set(get_OUTPUT_PATH(book_name))
     # Enable the convert button
     convert_btn['state'] = 'normal'
+    clear_text_var(chapter_preview)
 
 def convert2epub():
-    # Read fail
-    if not convert_txt():
-        ERROR_MESSAGE["read_error"]()
-        return
+    global FILE_PATH
+    if is_compressed_file(FILE_PATH):
+        extract_and_setpath(FILE_PATH)
 
     clear_text_var(chapter_preview)
-    with open(TMP_TXT_PATH, "r",encoding = 'utf-8') as f:
-        lines = f.readlines()
-    chapters = create_ebook(lines, output_name_var.get())
+
+    chapters = translate_and_convert(FILE_PATH, output_name_var.get())
     chapter_preview.insert(tk.INSERT, "".join(chapters))
     showinfo(title="訊息",message="轉換成功")
     
@@ -119,22 +134,22 @@ def search_novel():
 def select_novel():
     """確定選取
     """
-    global NOVEL_METADATA
-    selected_idx = novel_listbox.curselection()[0]
+    global NOVEL_METADATA, SELECTED_IDX
+    SELECTED_IDX = novel_listbox.curselection()[0]
     download_and_convert_btn['state'] = 'normal' # Enable convert button
     # Set output name
-    novel_name = NOVEL_METADATA[selected_idx]['novel_name']
+    novel_name = NOVEL_METADATA[SELECTED_IDX]['novel_name']
     output_name_var.set(get_OUTPUT_PATH(novel_name))
 
 def download_and_convert_novel():
-    global NOVEL_METADATA, FILE_PATH
+    global NOVEL_METADATA, FILE_PATH, SELECTED_IDX
     # Get selected novel and its index
-    selected_idx = novel_listbox.curselection()[0]
+
     # Download novel and convert
-    DOWNLOADER.download(NOVEL_METADATA[selected_idx])
+    DOWNLOADER.download(NOVEL_METADATA[SELECTED_IDX])
     FILE_PATH = TMP_TXT_PATH # set global file path for function convert2epub
     convert2epub()
-    if NOVEL_METADATA[selected_idx]['source_idx'] == 0:
+    if NOVEL_METADATA[SELECTED_IDX]['source_idx'] == 0:
         delete_if_exist(TMP_RAR_PATH)
 
 
@@ -159,6 +174,7 @@ ttk.Entry(monty1, textvariable=output_name_var, width=70, font=13).grid(column=1
 options = create_label_frame("選項", monty1)
 options.grid(column=0, row=2, columnspan=2, pady=8)
 ttk.Checkbutton(options, text="完成後開啟目錄",variable=open_explorer_var, style="normal.TCheckbutton").grid(column=0, row=0)
+ttk.Checkbutton(options, text="選取後自動解壓縮",variable=auto_extract_var, style="normal.TCheckbutton").grid(column=1, row=0)
 
 convert_btn = ttk.Button(monty1, text="開始轉換", command=convert2epub, state="disable", style="normal.TButton")
 convert_btn.grid(column=0, row=3, columnspan=2,pady=8)
