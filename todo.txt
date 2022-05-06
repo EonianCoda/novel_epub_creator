@@ -15,6 +15,8 @@
 4. 讀取rar,zip轉換
 5. 搜尋google drive已有檔案
 6. 搜尋所有來源，並標註來源n
+7. discord button
+8. database
 
 # 額外功能
 1. 保留txt原檔

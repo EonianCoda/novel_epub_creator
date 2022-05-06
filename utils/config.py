@@ -3,7 +3,7 @@ import os, shutil
 def delete_if_exist(file_path:str):
     if os.path.exists(file_path):
         os.remove(file_path)
-
+WEB_NAME = ['知軒藏書','久久小說下載網','愛久久小說下載網','平板電子書網','請看小說網','八零電子書']
 ### File path ###
 TMP_TXT_PATH = ".\\.tmp\\novel.txt"
 TMP_RAR_PATH = "tmp.rar"
