@@ -1,5 +1,5 @@
-# Bug
-1. encode找到的download網址
+# Bug 
+1. encode找到的download網址 (好像不是這個問題)
 2. 知軒藏書：載點1掛掉時，採用載點2
 3. 選取書後去改輸出檔名有bug：解決方案，當使用者點選確定選取時，用全域變數紀錄
 4. 刪除open_url的參數encoding

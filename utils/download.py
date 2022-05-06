@@ -43,8 +43,7 @@ def open_url(url, decode=True, encoding='utf-8', post_data=None, return_response
             except UnicodeDecodeError:
                 continue
         html = content.decode('gb18030','ignore')
-        return BeautifulSoup(html, 'html.parser') 
-        # raise ValueError("Some Error in open_url")
+        return BeautifulSoup(html, 'html.parser')
 
 def download_file(url, output_path:str):
     file = open_url(url, decode=False)

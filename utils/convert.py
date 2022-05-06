@@ -62,7 +62,8 @@ def create_ebook(lines:list, output_name:str):
     Args:
         book_name : the name of the book(inner name)
         output_name : the name of the output file(.epub)
-    Return: list of the chapter names of the book
+    Return: 
+        list of the chapter names of the book
     """
     # Create new book
     book_name = os.path.basename(output_name).replace('.epub','')
