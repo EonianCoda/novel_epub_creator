@@ -64,9 +64,9 @@ def update_file(service, update_drive_service_name, local_file_path, update_driv
     return file_metadata['name'], file_id['id']
 def get_creds():
     creds = None
-    token_path = '../.keys/token.json'
-    cred_path = '../.keys/credentials.json'
-    if os.path.exists('token.json'):
+    token_path = './.keys/token.json'
+    cred_path = './.keys/credentials.json'
+    if os.path.exists(token_path):
         creds = Credentials.from_authorized_user_file(token_path, SCOPES)
     # If there are no (valid) credentials available, let the user log in.
     if not creds or not creds.valid:
