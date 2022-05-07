@@ -11,6 +11,8 @@ from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
 from googleapiclient.http import MediaFileUpload, MediaIoBaseDownload
 
+from utils.database import Database
+
 
 # If modifying these scopes, delete the file token.json.
 SCOPES = ['https://www.googleapis.com/auth/drive']
@@ -94,13 +96,15 @@ def file_exist(items,filename):
         return True
     else :
         return False 
-def upload(filename,local_file_path):
+def upload(file,local_file_path):
     """
     建立service並將本地端的檔案傳到雲端上
-    :filename:上傳的檔案名稱
+    :file:(上傳的檔案名稱,資料來源)
     :local_file_path:檔案位置
     """
     creds = get_creds()
+    database = Database()
+    filename,source_idx = file
     try:
         service = build('drive', 'v3', credentials=creds)
         item_list=[]
@@ -114,9 +118,16 @@ def upload(filename,local_file_path):
         if filename not in item_list:
             file_name,file_id = update_file(service=service,update_drive_service_name=filename,local_file_path=local_file_path,update_drive_service_folder_id=get_folder_id)
             path = 'https://drive.google.com/file/d/'+file_id+'/view?usp=sharing'
+            key = str((filename,source_idx))
+            if database.get_download(key)== None:
+                database.add_download(key,file_id)
             return path
         else :
             # print('same')
+            file_id = items[item_list.index(filename)]['id']
+            key = str((filename,source_idx))
+            if database.get_download(key)== None:
+                database.add_download(key,file_id)
             path ='https://drive.google.com/file/d/'+items[item_list.index(filename)]['id']+'/view?usp=sharing'
             return path
     except HttpError as error:

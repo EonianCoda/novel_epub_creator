@@ -1,5 +1,6 @@
 import discord
 import configparser
+from utils.database import Database
 from utils.download import Downloader, create_metadata
 from utils.convert import read_file, simple2Trad, create_ebook,translate_and_convert
 from utils.config import TMP_TXT_PATH, LINE_BOT_TEMPLATE_FILE_PATH, get_OUTPUT_PATH
@@ -20,7 +21,8 @@ async def on_ready():
 
 @client.event
 async def on_message(message):
-   
+    database = Database()
+    
     if message.author == client.user:
         return
    
@@ -47,12 +49,18 @@ async def on_message(message):
             msg = await client.wait_for('message',check=check)
             book = result[int(msg.content)-1]
             novel_name, novel_idx, source_idx = book['novel_name'],book['novel_idx'],book['source_idx']
+            book_id = database.get_download(str(('{}.epub'.format(novel_name),source_idx)))
+            if book_id!= None:
+                await channel.send('https://drive.google.com/file/d/{}/view?usp=sharing'.format(book_id))
+                return
             await channel.send('正在下載{}！'.format(novel_name))
             DOWNLOADER.download(create_metadata(novel_name, novel_idx, source_idx))
             if translate_and_convert(TMP_TXT_PATH, get_OUTPUT_PATH(novel_name)):
                 # upload file
                 file_name = "{}.epub".format(novel_name)
-                link = upload(filename=file_name, local_file_path=get_OUTPUT_PATH(novel_name))
-            await channel.send('{}連結：\n{}'.format(novel_name,link))
+                file = (file_name,source_idx)
+                
+                link = upload(file =file, local_file_path=get_OUTPUT_PATH(novel_name))
+            # await channel.send('{}連結：\n{}'.format(novel_name,link))
 
 client.run(config.get('discord-bot', 'TOKEN'))
