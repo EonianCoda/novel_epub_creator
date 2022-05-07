@@ -22,9 +22,7 @@
   * 讀取epub簡繁轉換
 
 # 潛在問題
-1. main.py: tab1,tab2共用相同變數output_name
-2. app.py: book_dict是全域變數，當複數使用者使用時，會導致錯誤
-3. app.py: 使用不同載點時，使用全域變數紀錄
-4. downloader_utils.py: 若小說名稱相同時，使用dict紀錄會導致錯誤
+  * main.py: tab1,tab2共用相同變數output_name
+  * downloader_utils.py: 若小說名稱相同時，使用dict紀錄會導致錯誤
 ## 複數使用者造成的問題
-5. utils.download: 複數使用者下載檔案時，由於將檔案都放置於tmp下，可能會產生問題
+  * utils.download: 複數使用者下載檔案時，由於將檔案都放置於tmp下，可能會產生問題
