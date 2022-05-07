@@ -2,7 +2,7 @@ from __future__ import print_function
 
 import os.path
 
-from utils.config import get_OUTPUT_PATH
+from utils.config import get_OUTPUT_PATH,GOOGLE_DRIVE_PATH
 
 from google.auth.transport.requests import Request
 from google.oauth2.credentials import Credentials
@@ -117,7 +117,7 @@ def upload(file,local_file_path):
         items = get_file_list(service=service)
         if filename not in item_list:
             file_name,file_id = update_file(service=service,update_drive_service_name=filename,local_file_path=local_file_path,update_drive_service_folder_id=get_folder_id)
-            path = 'https://drive.google.com/file/d/'+file_id+'/view?usp=sharing'
+            path = GOOGLE_DRIVE_PATH.format(file_id)
             key = str((filename,source_idx))
             if database.get_download(key)== None:
                 database.add_download(key,file_id)
@@ -128,7 +128,7 @@ def upload(file,local_file_path):
             key = str((filename,source_idx))
             if database.get_download(key)== None:
                 database.add_download(key,file_id)
-            path ='https://drive.google.com/file/d/'+items[item_list.index(filename)]['id']+'/view?usp=sharing'
+            path =GOOGLE_DRIVE_PATH.format(items[item_list.index(filename)]['id'])
             return path
     except HttpError as error:
         # TODO(developer) - Handle errors from drive API.

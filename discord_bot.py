@@ -3,7 +3,7 @@ import configparser
 from utils.database import Database
 from utils.download import Downloader, create_metadata
 from utils.convert import read_file, simple2Trad, create_ebook,translate_and_convert
-from utils.config import TMP_TXT_PATH, LINE_BOT_TEMPLATE_FILE_PATH, get_OUTPUT_PATH
+from utils.config import TMP_TXT_PATH, LINE_BOT_TEMPLATE_FILE_PATH, get_OUTPUT_PATH,GOOGLE_DRIVE_PATH
 from utils.google_drive import upload
 from utils.config import WEB_NAME
 DOWNLOADER = Downloader()
@@ -28,6 +28,7 @@ async def on_message(message):
    
     if message.content.startswith('搜尋'):
         # user = message.user
+        print(message)
         user = message.author
         channel = message.channel
         data = message.content.split(" ")
@@ -51,7 +52,7 @@ async def on_message(message):
             novel_name, novel_idx, source_idx = book['novel_name'],book['novel_idx'],book['source_idx']
             book_id = database.get_download(str(('{}.epub'.format(novel_name),source_idx)))
             if book_id!= None:
-                await channel.send('https://drive.google.com/file/d/{}/view?usp=sharing'.format(book_id))
+                await channel.send(GOOGLE_DRIVE_PATH.format(book_id))
                 return
             await channel.send('正在下載{}！'.format(novel_name))
             DOWNLOADER.download(create_metadata(novel_name, novel_idx, source_idx))
@@ -61,6 +62,6 @@ async def on_message(message):
                 file = (file_name,source_idx)
                 
                 link = upload(file =file, local_file_path=get_OUTPUT_PATH(novel_name))
-            # await channel.send('{}連結：\n{}'.format(novel_name,link))
+            await channel.send('{}連結：\n{}'.format(novel_name,link))
 
 client.run(config.get('discord-bot', 'TOKEN'))

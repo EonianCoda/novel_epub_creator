@@ -25,7 +25,7 @@ def get_OUTPUT_PATH(novel_name:str):
     return os.path.join(OUTPUT_DIRECTORY, output_file_name)
 # For App
 LINE_BOT_TEMPLATE_FILE_PATH = "'./templates/template.json'"
-
+GOOGLE_DRIVE_PATH = 'https://drive.google.com/file/d/{}/view?usp=sharing'
 ### For convert ###
 MAX_CHAPTER_NAME_LEN = 35
 MIN_FIND_NOVELS = 15
