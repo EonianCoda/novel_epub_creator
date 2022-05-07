@@ -10,6 +10,11 @@ DOWNLOADER = Downloader()
 client = discord.Client()
 config = configparser.ConfigParser()
 config.read('./.keys/config.ini')
+def link_message(id,novel_name,novel_link):
+    return mention(id)+'\n小說名稱《{}\n下載連結：\n{}'.format(novel_name,novel_link)
+def mention(id):
+    myid = '<@{}>'.format(id)
+    return myid
 def full_number(number):
     fn = ''
     for i in number:
@@ -28,7 +33,7 @@ async def on_message(message):
    
     if message.content.startswith('搜尋'):
         # user = message.user
-        print(message)
+        # print(message)
         user = message.author
         channel = message.channel
         data = message.content.split(" ")
@@ -40,11 +45,15 @@ async def on_message(message):
             max_src_len = max([len(WEB_NAME[i['source_idx']]) for i in result])
             formated_str = '|\t{0:\u3000<%ds}\t{1:\u3000<%ds}\t{2:\u3000<%ds}\t|' % (4,max_book_len,max_src_len)
             name = [formated_str.format(full_number(str(idx+1)),book['novel_name'],WEB_NAME[book['source_idx']]) for idx,book in enumerate(result)]
-            await channel.send('—'*len(name[0]))
-            await channel.send(formated_str.format('標籤','小說名稱','資料來源'))
-            await channel.send('\n'.join(i for i in name))
-            await channel.send('—'*len(name[0]))
-            await channel.send('要下載哪一個？')
+            border_line = '—'*len(name[0])+'\n'
+            await channel.send(mention(user.id)+'\n'+border_line+formated_str.format('標籤','小說名稱','資料來源')+'\n'+
+                               '\n'.join(i for i in name)+'\n'+
+                                border_line+'要下載哪一個？')
+            # await channel.send('—'*len(name[0]))
+            # await channel.send(formated_str.format('標籤','小說名稱','資料來源'))
+            # await channel.send('\n'.join(i for i in name))
+            # await channel.send('—'*len(name[0]))
+            # await channel.send('要下載哪一個？')
             def check(m):
                 return   user == m.author and m.channel == channel
             msg = await client.wait_for('message',check=check)
@@ -52,16 +61,16 @@ async def on_message(message):
             novel_name, novel_idx, source_idx = book['novel_name'],book['novel_idx'],book['source_idx']
             book_id = database.get_download(str(('{}.epub'.format(novel_name),source_idx)))
             if book_id!= None:
-                await channel.send(GOOGLE_DRIVE_PATH.format(book_id))
+                await channel.send(link_message(user.id,novel_name,novel_link))
                 return
-            await channel.send('正在下載{}！'.format(novel_name))
+            await channel.send('正在下載《{}》！'.format(novel_name))
             DOWNLOADER.download(create_metadata(novel_name, novel_idx, source_idx))
             if translate_and_convert(TMP_TXT_PATH, get_OUTPUT_PATH(novel_name)):
                 # upload file
                 file_name = "{}.epub".format(novel_name)
                 file = (file_name,source_idx)
                 
-                link = upload(file =file, local_file_path=get_OUTPUT_PATH(novel_name))
-            await channel.send('{}連結：\n{}'.format(novel_name,link))
-
+                novel_link = upload(file =file, local_file_path=get_OUTPUT_PATH(novel_name))
+            await channel.send(link_message(user.id,novel_name,novel_link))
+   
 client.run(config.get('discord-bot', 'TOKEN'))
