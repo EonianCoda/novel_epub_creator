@@ -27,7 +27,7 @@ class Database(object):
                     f.write(f'{cur_version}')
         else:
             self._del_file()
-            cur_version = self.__version__()
+            cur_version = self.__version__
             with open(DATABASE_VERSION, 'w', encoding='utf-8') as f:
                 f.write(f'{cur_version}')
 
