@@ -2,11 +2,14 @@ import urllib
 from urllib.request import urlopen, Request
 from urllib.parse import quote
 from urllib import parse
-import os, shutil, string, glob
-from fake_useragent import UserAgent
-
-from bs4 import BeautifulSoup
+import os
+import shutil
+import string
+import glob
 import patoolib
+from fake_useragent import UserAgent
+from bs4 import BeautifulSoup
+
 
 from utils.database import Database 
 from utils.config import MIN_FIND_NOVELS, MAX_FIND_NOVELS_IF_NOT_MATCH, TMP_DIRECTORY, TMP_TXT_PATH, TMP_RAR_PATH, TMP_ZIP_PATH, USE_DATABASE, reset_TMP_DIRECTORY

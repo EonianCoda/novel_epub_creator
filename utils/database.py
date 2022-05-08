@@ -1,4 +1,5 @@
-import os, json
+import os
+import json
 from os.path import exists
 from utils.config import SEARCH_RESULTS_JSON, DATABASE_DIRECTORY, DOWNLOAD_RESULTS_JSON, DATABASE_VERSION, delete_if_exist
 

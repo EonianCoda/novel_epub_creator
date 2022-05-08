@@ -8,7 +8,8 @@ from utils.convert import simple2Trad, translate_and_convert
 from utils.download import Downloader
 from utils.config import TMP_DIRECTORY, TMP_RAR_PATH, TMP_TXT_PATH, SOURCE_NAME, reset_TMP_DIRECTORY, get_OUTPUT_PATH, delete_if_exist, is_compressed_file
 from utils.tkinter import clear_text_var, open_explorer, create_label_frame
-import os, glob
+import os 
+import glob
 import patoolib
 
 ERROR_MESSAGE = {'read_error':lambda : showinfo(title="錯誤",message="無法解析此檔案編碼"),

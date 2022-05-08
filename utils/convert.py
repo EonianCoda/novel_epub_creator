@@ -1,5 +1,6 @@
 from opencc import OpenCC
-import re, os
+import re 
+import os
 from utils.ebook import Ebook
 from utils.config import MAX_CHAPTER_NAME_LEN
 
