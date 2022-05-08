@@ -6,7 +6,7 @@ from tkinter.scrolledtext import ScrolledText
 
 from utils.convert import simple2Trad, translate_and_convert
 from utils.download import Downloader
-from utils.config import TMP_DIRECTORY, TMP_RAR_PATH, TMP_TXT_PATH, reset_TMP_DIRECTORY, get_OUTPUT_PATH, delete_if_exist, is_compressed_file
+from utils.config import TMP_DIRECTORY, TMP_RAR_PATH, TMP_TXT_PATH, SOURCE_NAME, reset_TMP_DIRECTORY, get_OUTPUT_PATH, delete_if_exist, is_compressed_file
 from utils.tkinter import clear_text_var, open_explorer, create_label_frame
 import os, glob
 import patoolib
@@ -125,7 +125,7 @@ def search_novel():
         return
 
     NOVEL_METADATA = result
-    novel_names = [metadata['novel_name'] + ' (來源{})'.format(metadata['source_idx']) for metadata in NOVEL_METADATA]
+    novel_names = [metadata['novel_name'] + ' ({})'.format(SOURCE_NAME[metadata['source_idx']]) for metadata in NOVEL_METADATA]
     selected_novel_var.set(novel_names)
     # Set button state
     download_and_convert_btn['state'] = 'disable'

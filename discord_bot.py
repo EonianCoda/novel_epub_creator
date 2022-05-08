@@ -5,11 +5,25 @@ from utils.download import Downloader, create_metadata
 from utils.convert import read_file, simple2Trad, create_ebook,translate_and_convert
 from utils.config import TMP_TXT_PATH, LINE_BOT_TEMPLATE_FILE_PATH, get_OUTPUT_PATH,GOOGLE_DRIVE_PATH
 from utils.google_drive import upload
-from utils.config import WEB_NAME
+from utils.config import SOURCE_NAME
+
+
 DOWNLOADER = Downloader()
 client = discord.Client()
 config = configparser.ConfigParser()
 config.read('./.keys/config.ini')
+
+def count_length(input_string:str) ->int:
+    """Count the real length of input string(the length of non-ascill string is 2)
+    """
+    length = 0
+    for s in input_string:
+        if ord(s) < 128:
+            length += 1
+        else:
+            length += 2
+    return length
+
 def link_message(id,novel_name,novel_link):
     return mention(id)+'\n小說名稱《{}\n下載連結：\n{}'.format(novel_name,novel_link)
 def mention(id):
@@ -42,9 +56,9 @@ async def on_message(message):
         else:
             #排版
             max_book_len = max([len(i['novel_name']) for i in result])
-            max_src_len = max([len(WEB_NAME[i['source_idx']]) for i in result])
+            max_src_len = max([len(SOURCE_NAME[i['source_idx']]) for i in result])
             formated_str = '|\t{0:\u3000<%ds}\t{1:\u3000<%ds}\t{2:\u3000<%ds}\t|' % (4,max_book_len,max_src_len)
-            name = [formated_str.format(full_number(str(idx+1)),book['novel_name'],WEB_NAME[book['source_idx']]) for idx,book in enumerate(result)]
+            name = [formated_str.format(full_number(str(idx+1)),book['novel_name'],SOURCE_NAME[book['source_idx']]) for idx,book in enumerate(result)]
             border_line = '—'*len(name[0])+'\n'
             await channel.send(mention(user.id)+'\n'+border_line+
                                 formated_str.format('標籤','小說名稱','資料來源')+'\n'+

@@ -1,12 +1,12 @@
 # Bug
   * encode找到的download網址(好像不是這個問題)
   * 刪除open_url的參數encoding：會有延伸問題，先保留
-  * 知軒藏書search函數中search_page有可能回傳None
 
 # 新增下載來源
   * 輕小說文庫
 
 # 重要功能
+  * database加入版本號，若版本號不同，則刪除全部資料庫
   * Downloader中search與download以try/except處理
   * 下載進度條
   * 將來源以str紀錄，而非int，這樣在進行來源的刪減時較為方便

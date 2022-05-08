@@ -9,7 +9,7 @@ from bs4 import BeautifulSoup
 import patoolib
 
 from utils.database import Database 
-from utils.config import MIN_FIND_NOVELS, MAX_FIND_NOVELS_IF_NOT_MATCH, TMP_DIRECTORY, TMP_TXT_PATH, TMP_RAR_PATH, TMP_ZIP_PATH, reset_TMP_DIRECTORY
+from utils.config import MIN_FIND_NOVELS, MAX_FIND_NOVELS_IF_NOT_MATCH, TMP_DIRECTORY, TMP_TXT_PATH, TMP_RAR_PATH, TMP_ZIP_PATH, USE_DATABASE, reset_TMP_DIRECTORY
 from utils.convert import simple2Trad, Trad2simple
 
 
@@ -72,15 +72,12 @@ def encode_chinese(data, is_post_data=False, encoding="utf-8"):
     else:
         return quote(data, safe=string.printable)
 
-def create_metadata(novel_name:str, novel_idx:int, source_idx:int=None):
+def create_metadata(novel_name:str, novel_idx:int, source_idx:str=None):
     """Create metadata for downloader
     Args:
         novel_name: the name of the novel
         novel_idx: the index of the novel
     """
-    if source_idx != None:
-        source_idx = int(source_idx)
-
     metadata = {'novel_name': novel_name, 
                 'novel_idx': int(novel_idx), 
                 'source_idx': source_idx}
@@ -93,38 +90,38 @@ def all_match(metadatas:list, keyword:str):
     return False
 
 class Downloader(object):
-    def __init__(self, search_all_source=False, use_database=True):
-        self.downloader = [Zxcs_downloader(),     # 知軒藏書
-                            Mijjxswco_downloader(),  # 久久小說下載網
-                            Ijjxs_downloader(), # 愛久久小說下載網
-                            Qiuyewx_downloader(), # 平板电子书网
-                            Qinkan_downloader(),  # 請看小說網
-                            Xsla_downloader(), ]  # 八零电子书 (Too slow)
+    def __init__(self, search_all_source=False, use_database=USE_DATABASE):
+        self.downloader = {'Zxcs': Zxcs_downloader(),     # 知軒藏書
+                            'Mijjxswco':Mijjxswco_downloader(),  # 久久小說下載網
+                            'Ijjxs':Ijjxs_downloader(), # 愛久久小說下載網
+                            'Qiuyewx':Qiuyewx_downloader(), # 平板电子书网
+                            'Qinkan':Qinkan_downloader(),  # 請看小說網
+                            'Xsla':Xsla_downloader(), }  # 八零电子书 (Too slow)
         self.search_all_source = search_all_source
         self.use_database = use_database
         if self.use_database:
             self.database = Database()
-    def search(self, key_word:str):
+    def search(self, key_word:str) -> list:
         """Search novel by key word
+        Args:
+            key_word: the key word for search
         Return:
-            source_idx, novel_dict
+            a list of all result's metadatas
         """
-        novels_metadata = []
-
+        # If use database, then search database by keyword
         if self.use_database:
-            print(self.use_database)
             result = self.database.get_search(key_word)
+            # If find, then return
             if result != None:
                 return result
-        
-        for source_idx, downloader in enumerate(self.downloader):
+        novels_metadata = []
+        for source_idx, downloader in self.downloader.items():
             metadatas = downloader.search(key_word)
             if metadatas != None:
+                # add source_idx
                 for metadata in metadatas:
                     metadata['source_idx'] = source_idx
                 novels_metadata.extend(metadatas)
-
-                # If get results, then return
                 cond = len(novels_metadata) >= MAX_FIND_NOVELS_IF_NOT_MATCH
                 if cond or (self.search_all_source == False and len(novels_metadata) >= MIN_FIND_NOVELS) or all_match(novels_metadata, key_word):
                     if self.use_database:
@@ -136,18 +133,22 @@ class Downloader(object):
                 self.database.add_search(key_word, novels_metadata)
             return novels_metadata
         else:
+            if self.use_database:
+                self.database.add_search(key_word, None)
             return None
+
     def download(self, metadata:dict):
         source_idx = metadata['source_idx']
         self.downloader[source_idx].download(metadata)
 
 class Zxcs_downloader(object):
-    """Download novel from websit: http://zxcs.me/
+    """Download novel from websit: http://zxcs.me/ (知軒藏書)
     """
     def __init__(self):
         self.base_url = "http://zxcs.me/index.php?keyword={}&page={}"
         self.search_url = lambda key, p : encode_chinese(self.base_url.format(Trad2simple(key),p))
-
+    def __str__(self) -> str:
+        return "Zxcs"
     def search_page(self, key_word:str, page=1):
         """Search novel with key word for one page
         Return:
@@ -157,7 +158,6 @@ class Zxcs_downloader(object):
         # No Result
         if soup.find('dl',id="plist") == None:
             return None
-
         link_list = [element.find('dt').find('a') for element in soup.find_all('dl',id="plist")] 
         # Get novel name and their index
         novels_metadata = []
@@ -184,10 +184,12 @@ class Zxcs_downloader(object):
         novels_metadatas, num_pages = result
         if num_pages != 1:
             for i in range(num_pages):
-                novels_metadata, _ = self.search_page(key_word, i)
+                result = self.search_page(key_word, i)
+                if result == None:
+                    continue
+                novels_metadata, _ = result
                 novels_metadatas.extend(novels_metadata)
         return novels_metadatas
-
 
     def download(self, metadata:dict):
         # Get download link
@@ -214,12 +216,13 @@ class Zxcs_downloader(object):
             return False
 
 class Ijjxs_downloader(object):
-    """Download novel from websit: https://www.ijjxs.com/
+    """Download novel from websit: https://www.ijjxs.com/ (愛久久小說下載網)
     """
     def __init__(self):
         self.base_url = "https://www.ijjxs.com"
         self.search_url = self.base_url + '/e/search/index.php'
-
+    def __str__(self) -> str:
+        return "Ijjxs"
     def search(self, key_word:str):
         post_data = {'keyboard':Trad2simple(key_word),'show':'title,writer'}
         post_data = encode_chinese(post_data, is_post_data=True)
@@ -241,23 +244,24 @@ class Ijjxs_downloader(object):
         # Get download link
         novel_name, novel_idx = metadata['novel_name'], metadata['novel_idx']
         novel_name = Trad2simple(novel_name)
-        download_url = "https://www.ijjxs.com/txt/{}.html".format(novel_idx)
+
+        download_url = f"{self.base_url}/txt/{novel_idx}.html"
         soup = open_url(download_url)
         download_url = soup.find('li', class_="downAddress_li").find('a').get('href')
-        download_url = "https://www.ijjxs.com" + download_url
+        download_url = self.base_url + download_url
         soup = open_url(download_url)
-
         # Download txt
-        download_url = "https://www.ijjxs.com" + soup.find('a',class_="strong green").get('href')
+        download_url = self.base_url + soup.find('a',class_="strong green").get('href')
         download_file(download_url, TMP_TXT_PATH)
 
 class Mijjxswco_downloader(object):
-    """Download novel from websit: https://m.ijjxsw.co/
+    """Download novel from websit: https://m.ijjxsw.co/ (久久小說下載網)
     """
     def __init__(self):
         self.base_url = "https://m.ijjxsw.co/"
         self.search_url = self.base_url + 'search/'
-
+    def __str__(self) -> str:
+        return "Mijjxswco"
     def search(self, key_word:str):
         post_data = {'searchkey' : Trad2simple(key_word)}
         post_data = encode_chinese(post_data, is_post_data=True)
@@ -288,12 +292,13 @@ class Mijjxswco_downloader(object):
         download_file(download_url, TMP_TXT_PATH)
 
 class Qiuyewx_downloader(object):
-    """Download novel from websit: https://www.qiuyewx.com/
+    """Download novel from websit: https://www.qiuyewx.com/ (平板電子書網)
     """
     def __init__(self):
         self.base_url = "https://www.qiuyewx.com/"
         self.search_url = self.base_url + 'modules/article/search.php'
-
+    def __str__(self) -> str:
+        return "Qiuyewx"
     def search(self, key_word:str):
         post_data = {'searchkey':Trad2simple(key_word)}
         post_data = encode_chinese(post_data, is_post_data=True)
@@ -325,13 +330,13 @@ class Qiuyewx_downloader(object):
         download_file(download_url, TMP_TXT_PATH)
 
 class Qinkan_downloader(object):
-    """Download novel from websit: http://www.qinkan.net/
+    """Download novel from websit: http://www.qinkan.net/ (請看小說網)
     """
     def __init__(self):
         self.base_url = "http://www.qinkan.net/"
-        self.search_url = self.base_url + 'e/search/index.php'
-
-    
+        self.search_url = 'http://www.qinkan.net/e/search/index.php'
+    def __str__(self) -> str:
+        return "Qinkan"
     def search_page(self, url:str):
         soup = open_url(url, encoding='gb18030')
         results = soup.find('div', class_="listBoxs").find('ul').find_all('li')
@@ -404,14 +409,14 @@ class Qinkan_downloader(object):
                 shutil.move(file_path, TMP_TXT_PATH)
                 break
 
-
 class Xsla_downloader(object):
-    """Download novel from websit:https://www.80xs.la/
+    """Download novel from websit:https://www.80xs.la/ (八零電子書)
     """
     def __init__(self):
         self.base_url = "https://www.80xs.la/"
         self.search_url = self.base_url + 'modules/article/search.php'
-
+    def __str__(self) -> str:
+        return "Xsla"
     def search(self, key_word:str):
         post_data = {'searchkey' : Trad2simple(key_word)}
         post_data = encode_chinese(post_data, is_post_data=True)
