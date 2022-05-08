@@ -7,7 +7,6 @@
   * 輕小說文庫
 
 # 重要功能
-  * discord排版
   * Downloader中search與download以try/except處理
   * 下載進度條
   * 顯示作者與簡介，方便使用者選到正確的小說
