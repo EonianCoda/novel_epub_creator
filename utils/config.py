@@ -37,9 +37,9 @@ DOWNLOAD_RESULTS_JSON = "./.database/download_results.json"
 
 ### Function variable ###
 SOURCE_NAME = {'Zxcs':'知軒藏書',
-                'Mijjxswco':'久久小說下載網',
-                'Ijjxs':'愛久久小說下載網',
-                'Qiuyewx':'平板電子書網',
+                'Mijjxswco':'久久小說網',
+                'Ijjxs':'愛久久小說網',
+                'Qiuyewx':'平板電子書',
                 'Qinkan':'請看小說網',
                 'Xsla':'八零電子書',
                 }

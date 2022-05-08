@@ -20,38 +20,62 @@ def convert2fullwidth(input_string:str) ->str:
             output.append(s)
     return "".join(output)
 
-def generate_search_result_msg(result:list) -> str:
+def generate_search_result_msg(result:list, show_source=True) -> str:
     max_len_of_book = max([len(m['novel_name']) for m in result])
     max_len_of_src = max([len(SOURCE_NAME[i['source_idx']]) for i in result])
     gap = "   "
-    len_line = 3 * 2 + max_len_of_book *2 + max_len_of_src * 2 + len(gap) * 2
-    msgs = ["```",
+    if show_source:
+        len_line = 3 * 2 + max_len_of_book *2 + max_len_of_src * 2 + len(gap) * 2
+        msgs = ["```",
             '下載列表:',
-        "╔" + "═" * len_line + "╗",]
-
-    formatted_str = "║ {idx:{space}<3}  {novel_name:{space}<{max_len_of_book}}{gap}{source:{space}<{max_len_of_src}}{gap}║"
-    line = formatted_str.format(idx='索引',
-                            novel_name='小說名稱', 
-                            max_len_of_book = max_len_of_book,
-                            source = '資料來源',
-                            max_len_of_src = max_len_of_src,
-                            gap=gap,
-                            space=chr(12288),
-                            )
-    msgs.append(line)
-    msgs.append("║" + "═" * len_line + "║")
-    for i, metadata in enumerate(result):
-        novel_name, source_idx = metadata['novel_name'], metadata['source_idx']
-        line = formatted_str.format(idx=convert2fullwidth(str(i)),
-                                novel_name=convert2fullwidth(novel_name), 
+            "╔" + "═" * len_line + "╗",]
+        formatted_str = "║ {idx:{space}<3}  {novel_name:{space}<{max_len_of_book}}{gap}{source:{space}<{max_len_of_src}}{gap}║"
+        line = formatted_str.format(idx='索引',
+                                novel_name='小說名稱', 
                                 max_len_of_book = max_len_of_book,
-                                source = SOURCE_NAME[source_idx],
+                                source = '資料來源',
                                 max_len_of_src = max_len_of_src,
                                 gap=gap,
                                 space=chr(12288),
                                 )
         msgs.append(line)
-    msgs.append("╚" + "═" * len_line + "╝")
+        msgs.append("║" + "═" * len_line + "║")
+        for i, metadata in enumerate(result):
+            novel_name, source_idx = metadata['novel_name'], metadata['source_idx']
+            line = formatted_str.format(idx=convert2fullwidth(str(i)),
+                                    novel_name=convert2fullwidth(novel_name), 
+                                    max_len_of_book = max_len_of_book,
+                                    source = SOURCE_NAME[source_idx],
+                                    max_len_of_src = max_len_of_src,
+                                    gap=gap,
+                                    space=chr(12288),
+                                    )
+            msgs.append(line)
+    else:
+        len_line = 3 + max_len_of_book *2 + max_len_of_src * 2 + len(gap) * 2 - 4
+        msgs = ['下載列表:', "```",]
+        formatted_str = " {idx:{space}<3}  {novel_name:{space}<{max_len_of_book}}{gap}{source:{space}<{max_len_of_src}}{gap}"
+        line = formatted_str.format(idx='索引',
+                                novel_name='小說名稱', 
+                                max_len_of_book = max_len_of_book,
+                                source = '資料來源',
+                                max_len_of_src = max_len_of_src,
+                                gap=gap,
+                                space=chr(12288),
+                                )
+        msgs.append(line)
+        msgs.append("─" * len_line)
+        for i, metadata in enumerate(result):
+            novel_name, source_idx = metadata['novel_name'], metadata['source_idx']
+            line = formatted_str.format(idx=convert2fullwidth(str(i)),
+                                    novel_name=convert2fullwidth(novel_name), 
+                                    max_len_of_book = max_len_of_book,
+                                    source = SOURCE_NAME[source_idx],
+                                    max_len_of_src = max_len_of_src,
+                                    gap=gap,
+                                    space=chr(12288),
+                                    )
+            msgs.append(line)
     msgs.append("```")
     return '\n'.join(msgs)
 
