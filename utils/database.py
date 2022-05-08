@@ -4,6 +4,7 @@ from os.path import exists
 from utils.config import SEARCH_RESULTS_JSON, DATABASE_DIRECTORY, DOWNLOAD_RESULTS_JSON, DATABASE_VERSION, delete_if_exist
 
 class Database(object):
+    @property
     def __version__(self):
         return 1.0
     
@@ -17,18 +18,18 @@ class Database(object):
         # Check database version
         if exists(DATABASE_VERSION):
             with open(DATABASE_VERSION, 'r', encoding='utf-8') as f:
-                version = float(f.read())
+                cur_version = float(f.read())
             # If local database version is older than current version, then delete it
-            if self.__version__ > version:
+            if self.__version__ > cur_version:
                 self._del_file
-                version = self.__version__()
+                cur_version = self.__version__()
                 with open(DATABASE_VERSION, 'w', encoding='utf-8') as f:
-                    f.write(f'{version}')
+                    f.write(f'{cur_version}')
         else:
             self._del_file()
-            version = self.__version__()
+            cur_version = self.__version__()
             with open(DATABASE_VERSION, 'w', encoding='utf-8') as f:
-                f.write(f'{version}')
+                f.write(f'{cur_version}')
 
         if exists(SEARCH_RESULTS_JSON):
             with open(SEARCH_RESULTS_JSON, 'r', encoding='utf-8') as f:

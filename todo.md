@@ -1,6 +1,7 @@
 # Bug
   * encode找到的download網址(好像不是這個問題)
   * 刪除open_url的參數encoding：會有延伸問題，先保留
+  * discord bot: 若translate 失敗，應回傳錯誤訊息
 
 # 新增下載來源
   * 輕小說文庫

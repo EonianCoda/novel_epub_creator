@@ -2,33 +2,74 @@ import discord
 import configparser
 from utils.database import Database
 from utils.download import Downloader, create_metadata
-from utils.convert import read_file, simple2Trad, create_ebook,translate_and_convert
-from utils.config import TMP_TXT_PATH, LINE_BOT_TEMPLATE_FILE_PATH, get_OUTPUT_PATH,GOOGLE_DRIVE_PATH
+from utils.convert import translate_and_convert
+from utils.config import TMP_TXT_PATH, SOURCE_NAME, GOOGLE_DRIVE_PATH, get_OUTPUT_PATH
 from utils.google_drive import upload
-from utils.config import SOURCE_NAME
-
 
 DOWNLOADER = Downloader()
 client = discord.Client()
 config = configparser.ConfigParser()
 config.read('./.keys/config.ini')
 
-def count_length(input_string:str) ->int:
-    """Count the real length of input string(the length of non-ascill string is 2)
-    """
-    length = 0
+def convert2fullwidth(input_string:str) ->str:
+    output = []
     for s in input_string:
-        if ord(s) < 128:
-            length += 1
+        if s.isascii():
+            output.append(chr(0xFEE0 + ord(s)))
         else:
-            length += 2
-    return length
+            output.append(s)
+    return "".join(output)
 
-def link_message(id,novel_name,novel_link):
-    return mention(id)+'\n小說名稱《{}\n下載連結：\n{}'.format(novel_name,novel_link)
-def mention(id):
-    myid = '<@{}>'.format(id)
-    return myid
+def generate_search_result_msg(result:list) -> str:
+    max_len_of_book = max([len(m['novel_name']) for m in result])
+    max_len_of_src = max([len(SOURCE_NAME[i['source_idx']]) for i in result])
+    gap = "   "
+    len_line = 3 * 2 + max_len_of_book *2 + max_len_of_src * 2 + len(gap) * 2
+    msgs = ["```",
+            '下載列表:',
+        "╔" + "═" * len_line + "╗",]
+
+    formatted_str = "║ {idx:{space}<3}  {novel_name:{space}<{max_len_of_book}}{gap}{source:{space}<{max_len_of_src}}{gap}║"
+    line = formatted_str.format(idx='索引',
+                            novel_name='小說名稱', 
+                            max_len_of_book = max_len_of_book,
+                            source = '資料來源',
+                            max_len_of_src = max_len_of_src,
+                            gap=gap,
+                            space=chr(12288),
+                            )
+    msgs.append(line)
+    msgs.append("║" + "═" * len_line + "║")
+    for i, metadata in enumerate(result):
+        novel_name, source_idx = metadata['novel_name'], metadata['source_idx']
+        line = formatted_str.format(idx=convert2fullwidth(str(i)),
+                                novel_name=convert2fullwidth(novel_name), 
+                                max_len_of_book = max_len_of_book,
+                                source = SOURCE_NAME[source_idx],
+                                max_len_of_src = max_len_of_src,
+                                gap=gap,
+                                space=chr(12288),
+                                )
+        msgs.append(line)
+    msgs.append("╚" + "═" * len_line + "╝")
+    msgs.append("```")
+    return '\n'.join(msgs)
+
+
+def mention_msg(user_id:int, msg:str="") -> str:
+    """Mention people with id
+    Args:
+        user_id: id of people
+        msg: the message sended
+    Return:
+        the message which   is sended
+    """
+    return  f'<@{user_id}>\n{msg}'
+
+def link_message(user_id:str, novel_name:str, novel_link:str) -> str:
+    msg = f'小說名稱：**《{novel_name}》**\n' + f'下載連結：{novel_link}'
+    return mention_msg(user_id, msg)
+
 def full_number(number):
     fn = ''
     for i in number:
@@ -52,37 +93,37 @@ async def on_message(message):
 
         result = DOWNLOADER.search(data[1])
         if result == None :
-            await channel.send(mention(user.id)+"搜尋不到此小說!!")
+            await channel.send(mention_msg(user.id, "搜尋不到此小說!"))
         else:
-            #排版
-            max_book_len = max([len(i['novel_name']) for i in result])
-            max_src_len = max([len(SOURCE_NAME[i['source_idx']]) for i in result])
-            formated_str = '|\t{0:\u3000<%ds}\t{1:\u3000<%ds}\t{2:\u3000<%ds}\t|' % (4,max_book_len,max_src_len)
-            name = [formated_str.format(full_number(str(idx+1)),book['novel_name'],SOURCE_NAME[book['source_idx']]) for idx,book in enumerate(result)]
-            border_line = '—'*len(name[0])+'\n'
-            await channel.send(mention(user.id)+'\n'+border_line+
-                                formated_str.format('標籤','小說名稱','資料來源')+'\n'+
-                               '\n'.join(i for i in name)+'\n'+
-                                border_line+'要下載哪一個？')
+            # Send search result
+            await channel.send(mention_msg(user.id, generate_search_result_msg(result) + '請問要下載哪個?'))
+
+            # Get the answer of the user
+            msg = await client.wait_for('message', check=lambda m: (user == m.author and m.channel == channel))
+            # TODO Error
+            if not msg.isnumeric() or int(msg.content) > len(result):
+                pass
+                # return
             
-            def check(m):
-                return   user == m.author and m.channel == channel
-            msg = await client.wait_for('message',check=check)
-            book = result[int(msg.content)-1]
+            book = result[int(msg.content) - 1]
             novel_name, novel_idx, source_idx = book['novel_name'],book['novel_idx'],book['source_idx']
             
-            book_id = database.get_download(str(('{}.epub'.format(novel_name),source_idx)))
+            # Search database
+            # If this novel exists, then interrupt and send the link to user
+            download_metedata = (f'{novel_name}.epub', source_idx)
+            book_id = database.get_download(str(download_metedata))
             if book_id!= None:
-                await channel.send(link_message(user.id,novel_name,GOOGLE_DRIVE_PATH.format(book_id)))
+                await channel.send(link_message(user.id, novel_name, GOOGLE_DRIVE_PATH.format(book_id)))
                 return
 
+            # Download novel
             await channel.send('正在下載《{}》！'.format(novel_name))
             DOWNLOADER.download(create_metadata(novel_name, novel_idx, source_idx))
+            # Translate and convert novel
             if translate_and_convert(TMP_TXT_PATH, get_OUTPUT_PATH(novel_name)):
-                file_name = "{}.epub".format(novel_name)
-                file = (file_name,source_idx)
-                novel_link = upload(file =file, local_file_path=get_OUTPUT_PATH(novel_name))
-            await channel.send(link_message(user.id,novel_name,novel_link))
+                # Upload file into google drive
+                novel_link = upload(file=download_metedata, local_file_path=get_OUTPUT_PATH(novel_name))
+            await channel.send(link_message(user.id, novel_name, novel_link))
    
 if __name__ == "__main__"  : 
     client.run(config.get('discord-bot', 'TOKEN'))
