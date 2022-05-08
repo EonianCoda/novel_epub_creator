@@ -1,22 +1,44 @@
 import os, json
-from utils.config import SEARCH_RESULTS_JSON, DATABASE_DIRECTORY,DOWNLOAD_RESULTS_JSON
+from os.path import exists
+from utils.config import SEARCH_RESULTS_JSON, DATABASE_DIRECTORY, DOWNLOAD_RESULTS_JSON, DATABASE_VERSION, delete_if_exist
 
 class Database(object):
+    def __version__(self):
+        return 1.0
+    
+    
     def __init__(self):
         self.search_results = dict()
         self.download_results = dict()
-
         # init database directory
         os.makedirs(DATABASE_DIRECTORY, exist_ok=True)
 
-        if os.path.exists(SEARCH_RESULTS_JSON):
+        # Check database version
+        if exists(DATABASE_VERSION):
+            with open(DATABASE_VERSION, 'r', encoding='utf-8') as f:
+                version = float(f.read())
+            # If local database version is older than current version, then delete it
+            if self.__version__ > version:
+                self._del_file
+                version = self.__version__()
+                with open(DATABASE_VERSION, 'w', encoding='utf-8') as f:
+                    f.write(f'{version}')
+        else:
+            self._del_file()
+            version = self.__version__()
+            with open(DATABASE_VERSION, 'w', encoding='utf-8') as f:
+                f.write(f'{version}')
+
+        if exists(SEARCH_RESULTS_JSON):
             with open(SEARCH_RESULTS_JSON, 'r', encoding='utf-8') as f:
                 self.search_results = json.load(f)
-        if os.path.exists(DOWNLOAD_RESULTS_JSON):
+        if exists(DOWNLOAD_RESULTS_JSON):
             with open(DOWNLOAD_RESULTS_JSON,'r', encoding='utf-8') as f:
                 self.download_results= json.load(f)
 
-
+    def _del_file(self):
+        delete_if_exist(SEARCH_RESULTS_JSON)
+        delete_if_exist(DOWNLOAD_RESULTS_JSON)
     def add_search(self, key:str, result: list, overwrite=True):
         """Add a new search result to database
         Args:

@@ -2,7 +2,7 @@ from __future__ import print_function
 
 import os.path
 
-from utils.config import get_OUTPUT_PATH,GOOGLE_DRIVE_PATH
+from utils.config import get_OUTPUT_PATH, GOOGLE_DRIVE_PATH
 
 from google.auth.transport.requests import Request
 from google.oauth2.credentials import Credentials

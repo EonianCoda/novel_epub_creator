@@ -25,10 +25,12 @@ def get_OUTPUT_PATH(novel_name:str):
     return os.path.join(OUTPUT_DIRECTORY, output_file_name)
 # Line bot path
 LINE_BOT_TEMPLATE_FILE_PATH = "'./templates/template.json'"
+# Google drive path
 GOOGLE_DRIVE_PATH = 'https://drive.google.com/file/d/{}/view?usp=sharing'
 
 # databse path
 DATABASE_DIRECTORY = "./.database"
+DATABASE_VERSION = "./.database/version"
 SEARCH_RESULTS_JSON = "./.database/search_results.json"
 DOWNLOAD_RESULTS_JSON = "./.database/download_results.json"
 

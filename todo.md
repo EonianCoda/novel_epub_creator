@@ -6,10 +6,8 @@
   * 輕小說文庫
 
 # 重要功能
-  * database加入版本號，若版本號不同，則刪除全部資料庫
   * Downloader中search與download以try/except處理
   * 下載進度條
-  * 將來源以str紀錄，而非int，這樣在進行來源的刪減時較為方便
   * 顯示作者與簡介，方便使用者選到正確的小說
   * google drive上傳(電腦版視窗)
   * 中國網路小說/輕小說 選擇
