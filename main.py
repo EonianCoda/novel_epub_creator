@@ -122,7 +122,6 @@ def search_novel():
         output_name_var.set('')
         # Disable button
         download_and_convert_btn['state'] = 'disable'
-        sure_select_btn['state'] = 'disable'
         return
 
     NOVEL_METADATA = result
@@ -130,9 +129,8 @@ def search_novel():
     selected_novel_var.set(novel_names)
     # Set button state
     download_and_convert_btn['state'] = 'disable'
-    sure_select_btn['state'] = 'normal'
 
-def select_novel():
+def select_novel(event):
     """確定選取
     """
     global NOVEL_METADATA, SELECTED_IDX
@@ -200,10 +198,9 @@ search_result_frame.grid(column=0, row=1, columnspan=2)
 
 # Novel List box
 novel_listbox = tk.Listbox(search_result_frame, listvariable=selected_novel_var, font=10, selectbackground="blue", selectmode="single", width=50)
+novel_listbox.bind("<<ListboxSelect>>", select_novel)
 novel_listbox.grid(column=0, row=1)
 
-sure_select_btn = ttk.Button(search_result_frame, text="確定選取", command=select_novel, state="disable")
-sure_select_btn.grid(column=1, row=1, padx=5)
 
 download_options = create_label_frame("", monty2)
 download_options.grid(column=0, row=1, columnspan=2)
