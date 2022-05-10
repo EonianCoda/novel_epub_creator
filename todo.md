@@ -7,6 +7,7 @@
   * 輕小說文庫
 
 # 重要功能
+  * 修改電腦版介面，將listbox事件改為用bind
   * Downloader中search與download以try/except處理
   * 下載進度條
   * 顯示作者與簡介，方便使用者選到正確的小說

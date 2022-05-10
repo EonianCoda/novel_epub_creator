@@ -51,6 +51,7 @@ def generate_search_result_msg(result:list, show_source=True) -> str:
                                     space=chr(12288),
                                     )
             msgs.append(line)
+        msgs.append("╚" + "═" * len_line + "╝")
     else:
         len_line = 3 + max_len_of_book *2 + max_len_of_src * 2 + len(gap) * 2 - 4
         msgs = ['下載列表:', "```",]
