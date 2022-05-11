@@ -11,75 +11,48 @@ client = discord.Client()
 config = configparser.ConfigParser()
 config.read('./.keys/config.ini')
 
-def convert2fullwidth(input_string:str) ->str:
+def convert2fullwidth(input_string:str)->str:
     output = []
     for s in input_string:
         if s.isascii():
             output.append(chr(0xFEE0 + ord(s)))
+        elif s == '"' or s == "'":
+            continue
         else:
             output.append(s)
     return "".join(output)
 
-def generate_search_result_msg(result:list, start_idx:int=1, show_source=True) -> str:
+def generate_result_lines(result:list) -> str:
     max_len_of_book = max([len(m['novel_name']) for m in result])
     max_len_of_src = max([len(SOURCE_NAME[i['source_idx']]) for i in result])
-    gap = "   "
-    if show_source:
-        len_line = 3 * 2 + max_len_of_book *2 + max_len_of_src * 2 + len(gap) * 2
-        msgs = ["```",
-            '下載列表:',
-            "╔" + "═" * len_line + "╗",]
-        formatted_str = "║ {idx:{space}<3}  {novel_name:{space}<{max_len_of_book}}{gap}{source:{space}<{max_len_of_src}}{gap}║"
-        line = formatted_str.format(idx='索引',
-                                novel_name='小說名稱', 
+    gap = chr(12288) * 2
+    len_line = 1 + 4 * 2 + max_len_of_book *2 + max_len_of_src * 2 + len(gap) * 2 * 2
+    formatted_str = "` {idx:{space}<4}  {novel_name:{space}<{max_len_of_book}}{gap}{source:{space}<{max_len_of_src}}{gap}`"
+    
+    msgs = []
+    msgs.append('下載列表：')
+    header_line = formatted_str.format(idx='索引',
+                            novel_name='小說名稱', 
+                            max_len_of_book = max_len_of_book,
+                            source = '資料來源',
+                            max_len_of_src = max_len_of_src,
+                            gap=gap,
+                            space=chr(12288),
+                            )
+    msgs.append(header_line)
+    msgs.append('`' + "─" * len_line + '`')
+    for i, metadata in enumerate(result):
+        novel_name, source_idx = metadata['novel_name'], metadata['source_idx']
+        line = formatted_str.format(idx=convert2fullwidth(str(i + 1)),
+                                novel_name=convert2fullwidth(novel_name), 
                                 max_len_of_book = max_len_of_book,
-                                source = '資料來源',
+                                source = SOURCE_NAME[source_idx],
                                 max_len_of_src = max_len_of_src,
                                 gap=gap,
                                 space=chr(12288),
                                 )
         msgs.append(line)
-        msgs.append("║" + "═" * len_line + "║")
-        for i, metadata in enumerate(result):
-            novel_name, source_idx = metadata['novel_name'], metadata['source_idx']
-            line = formatted_str.format(idx=convert2fullwidth(str(i + start_idx)),
-                                    novel_name=convert2fullwidth(novel_name), 
-                                    max_len_of_book = max_len_of_book,
-                                    source = SOURCE_NAME[source_idx],
-                                    max_len_of_src = max_len_of_src,
-                                    gap=gap,
-                                    space=chr(12288),
-                                    )
-            msgs.append(line)
-        msgs.append("╚" + "═" * len_line + "╝")
-    else:
-        len_line = 3 + max_len_of_book *2 + max_len_of_src * 2 + len(gap) * 2 - 4
-        msgs = ['下載列表:', "```",]
-        formatted_str = " {idx:{space}<3}  {novel_name:{space}<{max_len_of_book}}{gap}{source:{space}<{max_len_of_src}}{gap}"
-        line = formatted_str.format(idx='索引',
-                                novel_name='小說名稱', 
-                                max_len_of_book = max_len_of_book,
-                                source = '資料來源',
-                                max_len_of_src = max_len_of_src,
-                                gap=gap,
-                                space=chr(12288),
-                                )
-        msgs.append(line)
-        msgs.append("─" * len_line)
-        for i, metadata in enumerate(result):
-            novel_name, source_idx = metadata['novel_name'], metadata['source_idx']
-            line = formatted_str.format(idx=convert2fullwidth(str(i + start_idx)),
-                                    novel_name=convert2fullwidth(novel_name), 
-                                    max_len_of_book = max_len_of_book,
-                                    source = SOURCE_NAME[source_idx],
-                                    max_len_of_src = max_len_of_src,
-                                    gap=gap,
-                                    space=chr(12288),
-                                    )
-            msgs.append(line)
-    msgs.append("```")
-    return '\n'.join(msgs)
-
+    return msgs
 
 def mention_msg(user_id:int, msg:str="") -> str:
     """Mention people with id
@@ -121,28 +94,30 @@ async def on_message(message):
             await channel.send(mention_msg(user.id, "搜尋不到此小說!"))
         else:
             # Send search result
-            table = generate_search_result_msg(result)
-            print(table)
-            print(len(table))
-            if len(table) >= 2000:
-                num_msg = int((len(table) - 1) / 2000) + 1
-                last_idx = 0
-                len_block = int((len(result) - 1) / num_msg) + 1
-                print(num_msg, len_block)
-                for _ in range(num_msg):
-                    table = generate_search_result_msg(result[last_idx: min(last_idx + len_block, len(result))], start_idx=last_idx + 1)
-                    #print(len(table))
-                    await channel.send(table)
-                    last_idx += len_block
+            lines = generate_result_lines(result)
+            # Contain header lines
+            header_msg = "\n".join(lines[:3.]) + '\n'
+            len_line = len(lines[3]) + 1
+            cur_idx = 0
+            line_len_limit = 2000
+            while cur_idx < (len(lines) - 3):
+                msg = ""
+                # Add header
+                if cur_idx == 0:
+                    next_idx = cur_idx + int((line_len_limit - len(header_msg)) / len_line) - 1
+                    msg = header_msg 
+                else:
+                    next_idx = cur_idx + int(line_len_limit / len_line) - 1
+                msg += "\n".join(lines[3 + cur_idx: 3 + next_idx])
+                await channel.send(msg)
+                cur_idx = next_idx
 
-                await channel.send(mention_msg(user.id, '請問要下載哪個?'))
-            else:
-                await channel.send(mention_msg(user.id, table + '請問要下載哪個?'))
+            await channel.send(mention_msg(user.id, '亲，請問要下載哪個?'))
 
             # Get the answer of the user
             msg = await client.wait_for('message', check=lambda m: (user == m.author and m.channel == channel))
             if not msg.content.isnumeric() or int(msg.content) > len(result) or int(msg.content) <= 0:
-                await channel.send(mention_msg(user.id, "亲，您的索引不再单上呢，请再试试"))
+                await channel.send(mention_msg(user.id, "亲，您的索引不在单上呢，请再试试"))
                 return
             
             book = result[int(msg.content) - 1]

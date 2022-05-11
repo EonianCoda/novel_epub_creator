@@ -7,6 +7,7 @@
   * 輕小說文庫
 
 # 重要功能
+  * discord bot修改表格，當多表格時候，調整成統一大小，並且重新定義切割邏輯
   * Downloader中search與download以try/except處理
   * 下載進度條
   * 顯示作者與簡介，方便使用者選到正確的小說
