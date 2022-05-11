@@ -68,12 +68,13 @@ def extract_and_move_file(is_rar=True):
     shutil.move(files[0], TMP_TXT_PATH)
 
 def encode_chinese(data, is_post_data=False, encoding="utf-8"):
+    SAFE_LETTER = string.digits + string.ascii_letters + string.punctuation
     # is post data
     if is_post_data:
         return parse.urlencode(data, encoding=encoding).encode()
     # is url
     else:
-        return quote(data, safe=string.printable)
+        return quote(data, safe=SAFE_LETTER)
 
 def create_metadata(novel_name:str, novel_idx:int, source_idx:str=None):
     """Create metadata for downloader
@@ -206,6 +207,7 @@ class Zxcs_downloader(object):
         for file_url in files:
             try:
                 file_url = file_url.find('a').get('href')
+                file_url = encode_chinese(file_url)
                 # Download rar
                 download_file(file_url, TMP_RAR_PATH)
                 extract_and_move_file()

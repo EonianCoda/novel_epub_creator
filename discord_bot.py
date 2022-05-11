@@ -20,7 +20,7 @@ def convert2fullwidth(input_string:str) ->str:
             output.append(s)
     return "".join(output)
 
-def generate_search_result_msg(result:list, show_source=True) -> str:
+def generate_search_result_msg(result:list, start_idx:int=1, show_source=True) -> str:
     max_len_of_book = max([len(m['novel_name']) for m in result])
     max_len_of_src = max([len(SOURCE_NAME[i['source_idx']]) for i in result])
     gap = "   "
@@ -42,7 +42,7 @@ def generate_search_result_msg(result:list, show_source=True) -> str:
         msgs.append("║" + "═" * len_line + "║")
         for i, metadata in enumerate(result):
             novel_name, source_idx = metadata['novel_name'], metadata['source_idx']
-            line = formatted_str.format(idx=convert2fullwidth(str(i)),
+            line = formatted_str.format(idx=convert2fullwidth(str(i + start_idx)),
                                     novel_name=convert2fullwidth(novel_name), 
                                     max_len_of_book = max_len_of_book,
                                     source = SOURCE_NAME[source_idx],
@@ -68,7 +68,7 @@ def generate_search_result_msg(result:list, show_source=True) -> str:
         msgs.append("─" * len_line)
         for i, metadata in enumerate(result):
             novel_name, source_idx = metadata['novel_name'], metadata['source_idx']
-            line = formatted_str.format(idx=convert2fullwidth(str(i)),
+            line = formatted_str.format(idx=convert2fullwidth(str(i + start_idx)),
                                     novel_name=convert2fullwidth(novel_name), 
                                     max_len_of_book = max_len_of_book,
                                     source = SOURCE_NAME[source_idx],
@@ -121,7 +121,19 @@ async def on_message(message):
             await channel.send(mention_msg(user.id, "搜尋不到此小說!"))
         else:
             # Send search result
-            await channel.send(mention_msg(user.id, generate_search_result_msg(result) + '請問要下載哪個?'))
+            table = generate_search_result_msg(result)
+            if len(table) >= 2000:
+                num_msg = ((len(table) - 1) / 2000) + 1
+                last_idx = 0
+                len_block = int((len(num_msg) - 1)/ num_msg) + 1
+                for _ in range(num_msg):
+                    table = generate_search_result_msg(result[last_idx: min(last_idx + len_block, len(result))], start_idx=last_idx + 1)
+                    await channel.send(table)
+                    last_idx += len_block
+
+                await channel.send(mention_msg(user.id, '請問要下載哪個?'))
+            else:
+                await channel.send(mention_msg(user.id, table + '請問要下載哪個?'))
 
             # Get the answer of the user
             msg = await client.wait_for('message', check=lambda m: (user == m.author and m.channel == channel))
