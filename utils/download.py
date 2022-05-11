@@ -37,9 +37,9 @@ def open_url(url, decode=True, encoding='utf-8', post_data=None, return_response
     if not decode:
         return content
     else:
-        encoding = response.headers.get_content_charset()
-        if encoding != None:
-            return BeautifulSoup(content.decode(encoding), 'html.parser')
+        # encoding = response.headers.get_content_charset()
+        # if encoding != None:
+        #     return BeautifulSoup(content.decode(encoding), 'html.parser')
         encodings = ['utf-8','gb2312','gb18030']
         for encoding in encodings:
             try:
