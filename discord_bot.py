@@ -125,7 +125,7 @@ async def on_message(message):
             if len(table) >= 2000:
                 num_msg = int((len(table) - 1) / 2000) + 1
                 last_idx = 0
-                len_block = int((len(num_msg) - 1)/ num_msg) + 1
+                len_block = int((num_msg - 1) / num_msg) + 1
                 for _ in range(num_msg):
                     table = generate_search_result_msg(result[last_idx: min(last_idx + len_block, len(result))], start_idx=last_idx + 1)
                     await channel.send(table)
