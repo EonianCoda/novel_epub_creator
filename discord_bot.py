@@ -96,7 +96,7 @@ async def on_message(message):
             # Send search result
             lines = generate_result_lines(result)
             # Contain header lines
-            header_msg = "\n".join(lines[:3.]) + '\n'
+            header_msg = "\n".join(lines[:3]) + '\n'
             len_line = len(lines[3]) + 1
             cur_idx = 0
             line_len_limit = 2000
