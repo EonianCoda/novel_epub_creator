@@ -125,10 +125,9 @@ async def on_message(message):
 
             # Get the answer of the user
             msg = await client.wait_for('message', check=lambda m: (user == m.author and m.channel == channel))
-            # TODO Error
-            if not msg.isnumeric() or int(msg.content) > len(result):
-                pass
-                # return
+            if not msg.content.isnumeric() or int(msg.content) > len(result):
+                await channel.send(mention_msg(user.id, "錯誤，索引無效，請以正確的索引值回應"))
+                return
             
             book = result[int(msg.content) - 1]
             novel_name, novel_idx, source_idx = book['novel_name'],book['novel_idx'],book['source_idx']
