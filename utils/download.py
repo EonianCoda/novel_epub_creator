@@ -126,11 +126,11 @@ class Downloader(object):
                 for metadata in metadatas:
                     metadata['source_idx'] = source_idx
                 novels_metadata.extend(metadatas)
-                cond = len(novels_metadata) >= MAX_FIND_NOVELS_IF_NOT_MATCH
-                if cond or (self.search_all_source == False and len(novels_metadata) >= MIN_FIND_NOVELS) or all_match(novels_metadata, key_word):
-                    if self.use_database:
-                        self.database.add_search(key_word, novels_metadata)
-                    return novels_metadata
+                # cond = len(novels_metadata) >= MAX_FIND_NOVELS_IF_NOT_MATCH
+                # if cond or (self.search_all_source == False and len(novels_metadata) >= MIN_FIND_NOVELS) or all_match(novels_metadata, key_word):
+                #     if self.use_database:
+                #         self.database.add_search(key_word, novels_metadata)
+                #     return novels_metadata
 
         if len(novels_metadata) != 0:
             if self.use_database:
