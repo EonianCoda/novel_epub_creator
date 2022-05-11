@@ -122,12 +122,16 @@ async def on_message(message):
         else:
             # Send search result
             table = generate_search_result_msg(result)
+            print(table)
+            print(len(table))
             if len(table) >= 2000:
                 num_msg = int((len(table) - 1) / 2000) + 1
                 last_idx = 0
-                len_block = int((num_msg - 1) / num_msg) + 1
+                len_block = int((len(result) - 1) / num_msg) + 1
+                print(num_msg, len_block)
                 for _ in range(num_msg):
                     table = generate_search_result_msg(result[last_idx: min(last_idx + len_block, len(result))], start_idx=last_idx + 1)
+                    #print(len(table))
                     await channel.send(table)
                     last_idx += len_block
 
@@ -137,8 +141,8 @@ async def on_message(message):
 
             # Get the answer of the user
             msg = await client.wait_for('message', check=lambda m: (user == m.author and m.channel == channel))
-            if not msg.content.isnumeric() or int(msg.content) > len(result):
-                await channel.send(mention_msg(user.id, "錯誤，索引無效，請以正確的索引值回應"))
+            if not msg.content.isnumeric() or int(msg.content) > len(result) or int(msg.content) <= 0:
+                await channel.send(mention_msg(user.id, "亲，您的索引不再单上呢，请再试试"))
                 return
             
             book = result[int(msg.content) - 1]
