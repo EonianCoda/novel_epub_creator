@@ -133,7 +133,12 @@ async def on_message(message):
 
             # Download novel
             await channel.send('正在下載《{}》！'.format(novel_name))
-            DOWNLOADER.download(create_metadata(novel_name, novel_idx, source_idx))
+            success = DOWNLOADER.download(create_metadata(novel_name, novel_idx, source_idx))
+            # downloader error
+            if not success:
+                await channel.send(link_message("亲，下載失敗，請換個來源试试"))
+                return
+
             # Translate and convert novel
             result = translate_and_convert(TMP_TXT_PATH, get_OUTPUT_PATH(novel_name))
 

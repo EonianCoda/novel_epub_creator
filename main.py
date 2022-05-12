@@ -13,6 +13,7 @@ import glob
 import patoolib
 
 ERROR_MESSAGE = {'read_error':lambda : showinfo(title="錯誤",message="無法解析此檔案編碼"),
+                 'download_error':lambda : showinfo(title="錯誤",message="下載錯誤"),
                  'search_error':lambda : showinfo(title="訊息",message="找不到此小說"),
 }
 
@@ -125,7 +126,11 @@ def search_novel():
         return
 
     NOVEL_METADATA = result
-    novel_names = [metadata['novel_name'] + ' ({})'.format(SOURCE_NAME[metadata['source_idx']]) for metadata in NOVEL_METADATA]
+    novel_names = []
+    for idx, metadata in enumerate(NOVEL_METADATA):
+        novel_name = metadata['novel_name']
+        source_name = SOURCE_NAME[metadata['source_idx']]
+        novel_names.append(f"{idx} {novel_name} ({source_name})")
     selected_novel_var.set(novel_names)
     # Set button state
     download_and_convert_btn['state'] = 'disable'
@@ -145,7 +150,12 @@ def download_and_convert_novel():
     # Get selected novel and its index
 
     # Download novel and convert
-    DOWNLOADER.download(NOVEL_METADATA[SELECTED_IDX])
+    success = DOWNLOADER.download(NOVEL_METADATA[SELECTED_IDX])
+    if not success:
+        ERROR_MESSAGE["download_error"]()
+        download_and_convert_btn['state'] = 'disable'
+        output_name_var.set('')
+        return
     FILE_PATH = TMP_TXT_PATH # set global file path for function convert2epub
     convert2epub()
     if NOVEL_METADATA[SELECTED_IDX]['source_idx'] == 0:
@@ -197,7 +207,7 @@ search_result_frame.grid(column=0, row=1, columnspan=2)
 
 
 # Novel List box
-novel_listbox = tk.Listbox(search_result_frame, listvariable=selected_novel_var, font=10, selectbackground="blue", selectmode="single", width=50)
+novel_listbox = tk.Listbox(search_result_frame, listvariable=selected_novel_var, font=10, selectbackground="blue", selectmode="single", width=80)
 novel_listbox.bind("<<ListboxSelect>>", select_novel)
 novel_listbox.grid(column=0, row=1)
 

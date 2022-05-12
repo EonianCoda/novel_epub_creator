@@ -16,7 +16,7 @@ from utils.config import MIN_FIND_NOVELS, MAX_FIND_NOVELS_IF_NOT_MATCH, TMP_DIRE
 from utils.convert import simple2Trad, Trad2simple
 
 
-def open_url(url, decode=True, encoding='utf-8', post_data=None, return_response=False):
+def open_url(url, decode=True, post_data=None, return_response=False):
     """
     Args:
         url: url
@@ -37,9 +37,6 @@ def open_url(url, decode=True, encoding='utf-8', post_data=None, return_response
     if not decode:
         return content
     else:
-        # encoding = response.headers.get_content_charset()
-        # if encoding != None:
-        #     return BeautifulSoup(content.decode(encoding), 'html.parser')
         encodings = ['utf-8','gb2312','gb18030']
         for encoding in encodings:
             try:
@@ -141,9 +138,21 @@ class Downloader(object):
                 self.database.add_search(key_word, None)
             return None
 
-    def download(self, metadata:dict):
+    def download(self, metadata:dict) -> bool:
+        """
+        Args:
+            metadata: tuple of a book's metadata
+        Return:
+            If success downloader, return True, else return False
+        """
         source_idx = metadata['source_idx']
-        self.downloader[source_idx].download(metadata)
+        try:
+            self.downloader[source_idx].download(metadata)
+        # Site can't be reached or no response
+        except urllib.error.URLError as e:
+            print(f"Some error in download, {e}")
+            return False
+        return True
 
 class Zxcs_downloader(object):
     """Download novel from websit: http://zxcs.me/ (知軒藏書)
@@ -343,7 +352,7 @@ class Qinkan_downloader(object):
     def __str__(self) -> str:
         return "Qinkan"
     def search_page(self, url:str):
-        soup = open_url(url, encoding='gb18030')
+        soup = open_url(url)
         results = soup.find('div', class_="listBoxs").find('ul').find_all('li')
         novels_metadata = []
 
@@ -392,7 +401,7 @@ class Qinkan_downloader(object):
         novel_name, novel_idx = metadata['novel_name'], metadata['novel_idx']
         novel_name = Trad2simple(novel_name)
         download_url = "http://www.qinkan.net/book/{}.html".format(novel_idx)
-        soup = open_url(download_url, encoding="gb18030")
+        soup = open_url(download_url)
 
         # Download file
         download_url = soup.find_all('a',class_="downButton")[1].get('href')
