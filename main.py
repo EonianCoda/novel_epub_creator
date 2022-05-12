@@ -98,8 +98,11 @@ def convert2epub():
         extract_and_setpath(FILE_PATH)
 
     clear_text_var(chapter_preview)
-
-    chapters = translate_and_convert(FILE_PATH, output_name_var.get())
+    try:
+        chapters = translate_and_convert(FILE_PATH, output_name_var.get())
+    except UnicodeDecodeError:
+        ERROR_MESSAGE['read_error']()
+        return
     chapter_preview.insert(tk.INSERT, "".join(chapters))
     showinfo(title="訊息",message="轉換成功")
     

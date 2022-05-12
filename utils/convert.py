@@ -10,6 +10,8 @@ FINDS = [u'第(\d)+[章卷話]',
 
 def translate_and_convert(input_path:str, output_path:str):
     content = read_file(input_path)
+    if content == None:
+        raise UnicodeDecodeError
     content = simple2Trad(content)
     lines = content.splitlines(True)
     return create_ebook(lines, output_path)

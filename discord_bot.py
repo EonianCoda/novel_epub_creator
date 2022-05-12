@@ -140,8 +140,11 @@ async def on_message(message):
                 return
 
             # Translate and convert novel
-            result = translate_and_convert(TMP_TXT_PATH, get_OUTPUT_PATH(novel_name))
-
+            try:
+                result = translate_and_convert(TMP_TXT_PATH, get_OUTPUT_PATH(novel_name))
+            except UnicodeDecodeError:
+                await channel.send(link_message("亲，檔案解碼失敗，請換個來源试试"))
+                return
             #TODO Catch chapter error
             if result == []:
                 pass
