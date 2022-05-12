@@ -135,9 +135,13 @@ async def on_message(message):
             await channel.send('正在下載《{}》！'.format(novel_name))
             DOWNLOADER.download(create_metadata(novel_name, novel_idx, source_idx))
             # Translate and convert novel
-            if translate_and_convert(TMP_TXT_PATH, get_OUTPUT_PATH(novel_name)):
-                # Upload file into google drive
-                novel_link = upload(file=download_metedata, local_file_path=get_OUTPUT_PATH(novel_name))
+            result = translate_and_convert(TMP_TXT_PATH, get_OUTPUT_PATH(novel_name))
+
+            #TODO Catch chapter error
+            if result == []:
+                pass
+            # Upload file into google drive
+            novel_link = upload(file=download_metedata, local_file_path=get_OUTPUT_PATH(novel_name))
             await channel.send(link_message(user.id, novel_name, novel_link))
    
 if __name__ == "__main__"  : 

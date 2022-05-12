@@ -396,8 +396,8 @@ class Qinkan_downloader(object):
 
         # Download file
         download_url = soup.find_all('a',class_="downButton")[1].get('href')
-        file_extension = download_url.split('.')[-1]
         download_url = download_url.strip()
+        file_extension = download_url.split('.')[-1]
         download_url = encode_chinese(download_url)
         if file_extension == 'txt':
             download_file(download_url, TMP_TXT_PATH)
@@ -407,7 +407,6 @@ class Qinkan_downloader(object):
             file_path = TMP_ZIP_PATH
         elif file_extension == 'rar':
             file_path = TMP_RAR_PATH
-        print(download_url)
         # Extract and 
         download_file(download_url, file_path)
         patoolib.extract_archive(file_path, outdir=TMP_DIRECTORY)

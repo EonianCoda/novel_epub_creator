@@ -1,13 +1,12 @@
 # Bug
   * encode找到的download網址(好像不是這個問題)
-  * 刪除open_url的參數encoding：會有延伸問題，先保留
   * discord bot: 若translate 失敗，應回傳錯誤訊息
 
 # 新增下載來源
   * 輕小說文庫
 
 # 重要功能
-  * discord bot修改表格，當多表格時候，調整成統一大小，並且重新定義切割邏輯
+  * 刪除open_url的參數encoding
   * Downloader中search與download以try/except處理
   * 下載進度條
   * 顯示作者與簡介，方便使用者選到正確的小說
