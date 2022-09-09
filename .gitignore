@@ -12,4 +12,5 @@ test.txt
 *.spec
 *.ipynb
 *.exe
-
+*.ui
+tempCodeRunnerFile.py
