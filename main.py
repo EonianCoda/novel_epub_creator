@@ -26,7 +26,7 @@ SELECTED_IDX = -1
 win = tk.Tk()
 win.title('Ebook Creator')
 win.resizable(False, False)
-win.geometry('1000x920')
+win.geometry('3000x2000')
 
 ### TK Variable ###
 # For tab1
