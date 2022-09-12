@@ -80,6 +80,9 @@ SOURCE_NAME = {'Zxcs':'知軒藏書',
 MAX_CHAPTER_NAME_LEN = 35
 MIN_FIND_NOVELS = 15
 MAX_FIND_NOVELS_IF_NOT_MATCH = 30
+FINDS = [u'第(\d)+[章卷話]',
+        '第[一二三四五六七八九十千百零兩]+[章卷話]',
+        '序章']
 
 ### Flag ###
 USE_DATABASE = True

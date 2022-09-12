@@ -6,7 +6,7 @@ from tkinter.scrolledtext import ScrolledText
 
 from utils.convert import simple2Trad, translate_and_convert
 from utils.download import Downloader
-from utils.config import TMP_DIRECTORY, TMP_RAR_PATH, TMP_TXT_PATH, SOURCE_NAME
+from utils.config import FINDS, MAX_CHAPTER_NAME_LEN, TMP_DIRECTORY, TMP_RAR_PATH, TMP_TXT_PATH, SOURCE_NAME
 from utils.config import reset_TMP_DIRECTORY, delete_if_exist, is_compressed_file, Setting
 from utils.tkinter import clear_text_var, open_explorer, create_label_frame
 import os 
@@ -25,6 +25,7 @@ FILE_PATH = ""
 NOVEL_METADATA = []
 DOWNLOADER = Downloader()
 SELECTED_IDX = -1
+BLACKED_ELEMENT_SELECTED_IDX = -1
 # Windows
 win = tk.Tk()
 win.title('Ebook Creator')
@@ -32,8 +33,8 @@ win.resizable(False, False)
 # According of the screen size, revise window size 
 base_screen_w = 1920
 base_screen_h = 1080
-base_win_w = 1000
-base_win_h = 920
+base_win_w = 800
+base_win_h = 900
 screen_w = win.winfo_screenwidth()
 screen_h = win.winfo_screenheight()
 win_w = int(base_win_w * (screen_w / base_screen_w))
@@ -41,16 +42,27 @@ win_h = int(base_win_h * (screen_h / base_screen_h))
 win.geometry(f'{win_w}x{win_h}')
 
 ### TK Variable ###
-# For tab1
+## For tab1
 file_path_var = StringVar()
 encoding_var = StringVar()
 output_name_var = StringVar()
 output_dir_var  = StringVar()
 output_dir_var.set(setting['output_dir'])
+
+input_dir  = StringVar()
+input_dir.set(setting['input_dir'])
+
+# Output setting
+max_chapter_len_var = tk.IntVar()
+max_chapter_len_var.set(MAX_CHAPTER_NAME_LEN)
+#Options
 open_explorer_var =  tk.BooleanVar()
 auto_extract_var = tk.BooleanVar()
 auto_extract_var.set(True)
-# For tab2
+auto_convert_var = tk.BooleanVar()
+auto_convert_var.set(False)
+
+## For tab2
 search_var = StringVar()
 selected_novel_var = tk.StringVar()
 
@@ -59,6 +71,13 @@ s = ttk.Style()
 s.configure('normal.TButton', font=('courier', 14, 'normal'))
 s.configure('normal.TCheckbutton', font=('courier', 12, 'normal'))
 lableFrame_font = ('courier', 14, 'normal')
+
+## For tab3
+new_black_list_element = tk.StringVar()
+black_list_elements_list = []
+black_list_elements = tk.StringVar(value=black_list_elements_list)
+
+
 
 def get_output_path():
     output_dir = output_dir_var.get()
@@ -91,7 +110,7 @@ def select_files():
                 ('compressed files','*.zip')]
     file_path = fd.askopenfilename(
         title='Open files',
-        initialdir='./',
+        initialdir=input_dir.get(),
         filetypes=filetypes)
 
     # Cancell
@@ -102,12 +121,12 @@ def select_files():
     # File is rar or zip file
     if auto_extract_var.get() == True and is_compressed_file(file_path):
         extract_and_setpath(file_path)
-        book_name = os.path.basename(FILE_PATH).split('.')[0]
+        book_name = os.path.splitext(os.path.basename(FILE_PATH))[0]
     else:
         # Update the file name
         FILE_PATH = file_path
         # Get book name from file name
-        book_name = os.path.basename(file_path).split('.')[0]
+        book_name = os.path.splitext(os.path.basename(file_path))[0]
 
     book_name = simple2Trad(book_name)
     # Set output path
@@ -117,6 +136,10 @@ def select_files():
     convert_btn['state'] = 'normal'
     clear_text_var(chapter_preview)
 
+    # Auto convert
+    if auto_convert_var.get() == True:
+        convert2epub()
+
 def convert2epub():
     global FILE_PATH
     if is_compressed_file(FILE_PATH):
@@ -124,7 +147,7 @@ def convert2epub():
 
     clear_text_var(chapter_preview)
     try:
-        chapters = translate_and_convert(FILE_PATH, get_output_path())
+        chapters = translate_and_convert(FILE_PATH, get_output_path(), white_list.get("1.0","end-1c").split('\n'), black_list_elements_list, max_chapter_len_var.get())
     except UnicodeDecodeError:
         ERROR_MESSAGE['read_error']()
         return
@@ -133,7 +156,7 @@ def convert2epub():
     
     # Open explorer
     if open_explorer_var.get() == True:
-        path = os.path.dirname(output_dir_var.get())
+        path = output_dir_var.get()
         if path == '':
             path = '.'
         open_explorer(path)
@@ -196,7 +219,8 @@ tab1 = ttk.Frame(tabControl)
 tabControl.add(tab1, text="epub轉換")
 tab2 = ttk.Frame(tabControl)
 tabControl.add(tab2, text="下載小說")
-
+tab3 = ttk.Frame(tabControl)
+tabControl.add(tab3, text="設定")
 tabControl.pack(expand=1,fill="both")
 
 ### Tab1: Convert epub ###
@@ -205,25 +229,26 @@ monty1.grid(column=0, row=0)
 ttk.Button(monty1, text="選擇檔案", command=select_files, style="normal.TButton", width=12).grid(column=0, row=0)
 ttk.Entry(monty1, textvariable=file_path_var, state=tk.DISABLED, width=70, font=13).grid(column=1, row=0, padx=10)
 
-ttk.Label(monty1, text="輸出目錄", font=lableFrame_font).grid(column=0, row=1, pady=10)
-ttk.Entry(monty1, textvariable=output_dir_var, width=70, font=13).grid(column=1, row=1, pady=10)
+ttk.Label(monty1, text="輸入預設目錄", font=lableFrame_font).grid(column=0, row=1, pady=10)
+ttk.Entry(monty1, textvariable=input_dir, width=70, font=13).grid(column=1, row=1, pady=10)
 
-ttk.Label(monty1, text="輸出名稱", font=lableFrame_font).grid(column=0, row=2, pady=10)
-ttk.Entry(monty1, textvariable=output_name_var, width=70, font=13).grid(column=1, row=2, pady=10)
-#ttk.Entry(monty1, textvariable=output_name_var, width=70, font=13, state='dis').grid(column=2, row=2, pady=10)
+ttk.Label(monty1, text="輸出目錄", font=lableFrame_font).grid(column=0, row=2, pady=10)
+ttk.Entry(monty1, textvariable=output_dir_var, width=70, font=13).grid(column=1, row=2, pady=10)
 
-
+ttk.Label(monty1, text="輸出名稱", font=lableFrame_font).grid(column=0, row=3, pady=10)
+ttk.Entry(monty1, textvariable=output_name_var, width=70, font=13).grid(column=1, row=3, pady=10)
 
 options = create_label_frame("選項", monty1)
-options.grid(column=0, row=3, columnspan=2, pady=8)
+options.grid(column=0, row=4, columnspan=2, pady=8)
 ttk.Checkbutton(options, text="完成後開啟目錄",variable=open_explorer_var, style="normal.TCheckbutton").grid(column=0, row=0)
 ttk.Checkbutton(options, text="選取後自動解壓縮",variable=auto_extract_var, style="normal.TCheckbutton").grid(column=1, row=0)
+ttk.Checkbutton(options, text="選取後直接轉換",variable=auto_convert_var, style="normal.TCheckbutton").grid(column=2, row=0)
 
 convert_btn = ttk.Button(monty1, text="開始轉換", command=convert2epub, state="disable", style="normal.TButton")
-convert_btn.grid(column=0, row=4, columnspan=2,pady=8)
+convert_btn.grid(column=0, row=5, columnspan=2,pady=8)
 
 chapter_preview_frame = create_label_frame("章節預覽", monty1)
-chapter_preview_frame.grid(column=0, row=5, columnspan=2)
+chapter_preview_frame.grid(column=0, row=6, columnspan=2)
 chapter_preview = ScrolledText(chapter_preview_frame, font=5,wrap=tk.WORD)
 chapter_preview.grid(column=0, row=0, columnspan=2, ipady=5)
 
@@ -259,11 +284,70 @@ ttk.Checkbutton(download_options, text="完成後開啟目錄",variable=open_exp
 download_and_convert_btn = ttk.Button(download_options, text="下載並轉換", command=download_and_convert_novel, state="disable", style="normal.TButton", width=12)
 download_and_convert_btn.grid(column=0, row=3, columnspan=3, pady=10)
 
+### Tab3: Convert epub ###
+def reset_white_list():
+    clear_text_var(white_list)
+    white_list.insert(tk.INSERT, "\n".join(FINDS))
 
-# chapter_preview_frame = create_label_frame("章節預覽", monty2)
-# chapter_preview_frame.grid(column=0, row=2, columnspan=2)
-# chapter_preview = ScrolledText(chapter_preview_frame, font=5,wrap=tk.WORD)
-# chapter_preview.grid(column=0, row=0, columnspan=2, ipady=5)
+def reset_black_list():
+    global black_list_elements_list
+    black_list_elements.set([])
+    black_list_delete_btn['state'] = 'disable'
+    black_list_elements_list = []
+def reset_setting():
+    max_chapter_len_var.set(MAX_CHAPTER_NAME_LEN)
+    reset_white_list()
+    reset_black_list()
+
+def add_new_black_list():
+    if new_black_list_element.get() != "":
+        black_list_elements_list.append(new_black_list_element.get())
+        black_list_elements.set(black_list_elements_list)
+        new_black_list_element.set('')
+
+def select_black_element(event):
+    """確定選取黑名單元素
+    """
+    global BLACKED_ELEMENT_SELECTED_IDX
+    BLACKED_ELEMENT_SELECTED_IDX = black_list_listbox.curselection()[0]
+    black_list_delete_btn['state'] = 'normal' # Enable convert button
+
+def delete_black_element():
+    global BLACKED_ELEMENT_SELECTED_IDX
+    black_list_elements_list.remove(black_list_elements_list[BLACKED_ELEMENT_SELECTED_IDX])
+    black_list_elements.set(black_list_elements_list)
+    black_list_delete_btn['state'] = 'disable'
+
+
+monty3 = ttk.LabelFrame(tab3)
+monty3.grid(column=0, row=0)
+ttk.Button(monty3, text="重置設定", command=reset_setting, style="normal.TButton", width=12).grid(column=0, row=0)
+max_chapter_len = create_label_frame("章節名稱最大長度", monty3)
+max_chapter_len.grid(column=0, row=1, columnspan=1, pady=8)
+ttk.Spinbox(max_chapter_len, textvariable=max_chapter_len_var, from_=10, to=100, font=12).grid(column=0, row=0)
+
+white_list_frame = create_label_frame("章節白名單", monty3)
+white_list_frame.grid(column=0, row=2, columnspan=1, pady=8)
+
+ttk.Button(white_list_frame, text="回復預設", command=reset_white_list, style="normal.TButton", width=12).grid(column=0, row=0)
+white_list = ScrolledText(white_list_frame, font=5, height=10,wrap=tk.WORD)
+white_list.grid(column=0, row=1, ipady=5)
+white_list.insert(tk.INSERT, "\n".join(FINDS))
+
+black_list_frame = create_label_frame("章節黑名單", monty3)
+black_list_frame.grid(column=0, row=3, columnspan=1, pady=8)
+
+ttk.Entry(black_list_frame, textvariable=new_black_list_element, width=70, font=13).grid(column=0, row=0, columnspan=3, padx=10)
+
+ttk.Button(black_list_frame, text="加入", command=add_new_black_list, style="normal.TButton", width=12).grid(column=0, row=1)
+black_list_delete_btn = ttk.Button(black_list_frame, text="刪除所選項", command=delete_black_element, style="normal.TButton", width=12, state=tk.DISABLED)
+black_list_delete_btn.grid(column=1, row=1)
+ttk.Button(black_list_frame, text="清空", command=reset_black_list, style="normal.TButton", width=12).grid(column=2, row=1)
+
+black_list_listbox = tk.Listbox(black_list_frame, listvariable=black_list_elements, font=10, selectbackground="blue", selectmode="single", width=60)
+black_list_listbox.bind("<<ListboxSelect>>", select_black_element)
+black_list_listbox.grid(column=0, row=2, rowspan=1,columnspan=3)
+#ttk.Button(monty3, text="儲存設定", command=select_files, style="normal.TButton", width=12).grid(column=0, row=4)
 
 
 if __name__ == "__main__":
