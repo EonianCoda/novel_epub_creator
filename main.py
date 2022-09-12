@@ -77,8 +77,8 @@ new_black_list_element = tk.StringVar()
 black_list_elements_list = []
 black_list_elements = tk.StringVar(value=black_list_elements_list)
 
-
-
+## For tab4
+multi_file_paths = []
 def get_output_path():
     output_dir = output_dir_var.get()
     if output_dir == "":
@@ -113,7 +113,7 @@ def select_files():
         initialdir=input_dir.get(),
         filetypes=filetypes)
 
-    # Cancell
+    # Cancel
     if file_path == '':
         return
 
@@ -165,6 +165,8 @@ def search_novel():
     global NOVEL_METADATA, DOWNLOADER
 
     keyword = search_var.get()
+    if keyword == "":
+        return
     result = DOWNLOADER.search(keyword)
     # Not found
     if result == None:
@@ -190,6 +192,9 @@ def select_novel(event):
     """確定選取
     """
     global NOVEL_METADATA, SELECTED_IDX
+    if len(NOVEL_METADATA) == 0:
+        return
+
     SELECTED_IDX = novel_listbox.curselection()[0]
     download_and_convert_btn['state'] = 'normal' # Enable convert button
     # Set output name
@@ -221,6 +226,8 @@ tab2 = ttk.Frame(tabControl)
 tabControl.add(tab2, text="下載小說")
 tab3 = ttk.Frame(tabControl)
 tabControl.add(tab3, text="設定")
+tab4 = ttk.Frame(tabControl)
+tabControl.add(tab4, text="批量轉換")
 tabControl.pack(expand=1,fill="both")
 
 ### Tab1: Convert epub ###
@@ -309,6 +316,8 @@ def select_black_element(event):
     """確定選取黑名單元素
     """
     global BLACKED_ELEMENT_SELECTED_IDX
+    if len(black_list_elements_list) == 0:
+        return
     BLACKED_ELEMENT_SELECTED_IDX = black_list_listbox.curselection()[0]
     black_list_delete_btn['state'] = 'normal' # Enable convert button
 
@@ -349,6 +358,108 @@ black_list_listbox.bind("<<ListboxSelect>>", select_black_element)
 black_list_listbox.grid(column=0, row=2, rowspan=1,columnspan=3)
 #ttk.Button(monty3, text="儲存設定", command=select_files, style="normal.TButton", width=12).grid(column=0, row=4)
 
+### Tab4: Convert epub ###
+
+def convert2epub_multi():
+    global multi_file_paths
+    # get output directory
+    output_dir = output_dir_var.get()
+    if output_dir == "":
+        output_dir = ".\\output"
+    # get output names 
+    multi_output_names = multi_output_name_block_text.get("1.0","end-1c").split('\n')
+    preview_texts = ""
+    for in_f, out_f in zip(multi_file_paths, multi_output_names):
+        output_path = os.path.join(output_dir, out_f)
+        try:
+            chapters = translate_and_convert(in_f, output_path, white_list.get("1.0","end-1c").split('\n'), black_list_elements_list, max_chapter_len_var.get())
+            preview_texts += out_f + ":\n"+ '-'*100 + '\n' + "".join(chapters) + '\n' + '-'*100 + '\n'
+        except UnicodeDecodeError:
+            ERROR_MESSAGE['read_error']()
+            return
+
+    # clear chapter preview
+    clear_text_var(multi_chapter_preview)
+    multi_chapter_preview.insert(tk.INSERT, preview_texts)
+    showinfo(title="訊息",message="轉換成功")
+    
+    # Open explorer
+    if open_explorer_var.get() == True:
+        path = output_dir_var.get()
+        if path == '':
+            path = '.'
+        open_explorer(path)
+
+def select_multi_files():
+    global multi_file_paths
+    filetypes = [('Accepted files', '*.txt'),
+                ('text files', '*.txt'),
+]
+    file_path = fd.askopenfilenames(
+        title='Open files',
+        initialdir=input_dir.get(),
+        filetypes=filetypes)
+
+    # Cancel
+    if file_path == '':
+        return
+
+    multi_file_paths = file_path
+    #print(multi_file_paths)
+    clear_text_var(multi_select_file_block_text)
+    multi_select_file_block_text.insert(tk.INSERT, "\n".join(multi_file_paths))
+    
+    # Get book name from file name
+    multi_output_names = [] # reset variable
+    for f in multi_file_paths:
+        book_name = os.path.splitext(os.path.basename(f))[0]
+        book_name = simple2Trad(book_name)
+        multi_output_names.append(end_with_epub(book_name))
+
+    clear_text_var(multi_output_name_block_text)
+    multi_output_name_block_text.insert(tk.INSERT, "\n".join(multi_output_names))
+    multi_convert_btn['state'] = 'normal'
+    clear_text_var(multi_chapter_preview)
+
+    # Auto convert
+    if auto_convert_var.get() == True:
+        convert2epub_multi()
+
+
+
+monty4 = ttk.LabelFrame(tab4)
+monty4.grid(column=0, row=0)
+
+select_file_frame = create_label_frame("選擇檔案", monty4)
+select_file_frame.grid(column=0, row=0, columnspan=2, pady=8)
+
+ttk.Button(select_file_frame, text="選擇", command=select_multi_files, style="normal.TButton", width=12).grid(column=0, row=0)
+multi_select_file_block_text = ScrolledText(select_file_frame, height=5, font=5,wrap=tk.WORD)
+multi_select_file_block_text.grid(column=0, row=1, ipady=5)
+
+ttk.Label(monty4, text="輸入目錄", font=lableFrame_font).grid(column=0, row=1, pady=10)
+ttk.Entry(monty4, textvariable=input_dir, width=70, font=13).grid(column=1, row=1, pady=10)
+
+ttk.Label(monty4, text="輸出目錄", font=lableFrame_font).grid(column=0, row=2, pady=10)
+ttk.Entry(monty4, textvariable=output_dir_var, width=70, font=13).grid(column=1, row=2, pady=10)
+
+output_file_frame = create_label_frame("輸出名稱", monty4)
+output_file_frame.grid(column=0, row=3, columnspan=2, pady=8)
+multi_output_name_block_text = ScrolledText(output_file_frame, height=5, font=5,wrap=tk.WORD)
+multi_output_name_block_text.grid(column=0, row=0, ipady=5)
+
+options = create_label_frame("選項", monty4)
+options.grid(column=0, row=4, columnspan=2, pady=8)
+ttk.Checkbutton(options, text="完成後開啟目錄",variable=open_explorer_var, style="normal.TCheckbutton").grid(column=0, row=0)
+ttk.Checkbutton(options, text="選取後直接轉換",variable=auto_convert_var, style="normal.TCheckbutton").grid(column=1, row=0)
+
+multi_convert_btn = ttk.Button(monty4, text="開始批次轉換", command=convert2epub_multi, state="disable", style="normal.TButton")
+multi_convert_btn.grid(column=0, row=5, columnspan=2,pady=8)
+
+chapter_preview_frame = create_label_frame("章節預覽", monty4)
+chapter_preview_frame.grid(column=0, row=6, columnspan=2)
+multi_chapter_preview = ScrolledText(chapter_preview_frame, font=5,wrap=tk.WORD, height=13)
+multi_chapter_preview.grid(column=0, row=0, columnspan=2, ipady=5)
 
 if __name__ == "__main__":
     win.mainloop()
