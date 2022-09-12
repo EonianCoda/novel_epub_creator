@@ -12,7 +12,7 @@ from bs4 import BeautifulSoup
 
 
 from utils.database import Database 
-from utils.config import MIN_FIND_NOVELS, MAX_FIND_NOVELS_IF_NOT_MATCH, TMP_DIRECTORY, TMP_TXT_PATH, TMP_RAR_PATH, TMP_ZIP_PATH, USE_DATABASE, reset_TMP_DIRECTORY
+from utils.config import TMP_DIRECTORY, TMP_TXT_PATH, TMP_RAR_PATH, TMP_ZIP_PATH, USE_DATABASE, reset_TMP_DIRECTORY
 from utils.convert import simple2Trad, Trad2simple
 
 
@@ -95,7 +95,7 @@ class Downloader(object):
         self.downloader = {'Zxcs': Zxcs_downloader(),     # 知軒藏書
                             'Mijjxswco':Mijjxswco_downloader(),  # 久久小說下載網
                             'Ijjxs':Ijjxs_downloader(), # 愛久久小說下載網
-                            'Qiuyewx':Qiuyewx_downloader(), # 平板电子书网
+                            # 'Qiuyewx':Qiuyewx_downloader(), # 平板电子书网
                             'Qinkan':Qinkan_downloader(),  # 請看小說網
                             'Xsla':Xsla_downloader(), }  # 八零电子书 (Too slow)
         self.search_all_source = search_all_source

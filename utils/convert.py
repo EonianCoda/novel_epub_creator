@@ -87,6 +87,7 @@ def create_ebook(lines:list, output_name:str):
                 chapter_name = line
                 chapter_names.append(chapter_name)
                 continue
+            line = line.strip()
             content += "<br>" + line + "<br>"
     # Add last chpater into the book
     content += "</p>"

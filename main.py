@@ -6,7 +6,8 @@ from tkinter.scrolledtext import ScrolledText
 
 from utils.convert import simple2Trad, translate_and_convert
 from utils.download import Downloader
-from utils.config import TMP_DIRECTORY, TMP_RAR_PATH, TMP_TXT_PATH, SOURCE_NAME, reset_TMP_DIRECTORY, get_OUTPUT_PATH, delete_if_exist, is_compressed_file
+from utils.config import TMP_DIRECTORY, TMP_RAR_PATH, TMP_TXT_PATH, SOURCE_NAME
+from utils.config import reset_TMP_DIRECTORY, delete_if_exist, is_compressed_file, Setting
 from utils.tkinter import clear_text_var, open_explorer, create_label_frame
 import os 
 import glob
@@ -16,6 +17,8 @@ ERROR_MESSAGE = {'read_error':lambda : showinfo(title="錯誤",message="無法�
                  'download_error':lambda : showinfo(title="錯誤",message="下載錯誤"),
                  'search_error':lambda : showinfo(title="訊息",message="找不到此小說"),
 }
+### Setting ###
+setting = Setting()
 
 ### Global Variable ###
 FILE_PATH = ""
@@ -26,13 +29,24 @@ SELECTED_IDX = -1
 win = tk.Tk()
 win.title('Ebook Creator')
 win.resizable(False, False)
-win.geometry('3000x2000')
+# According of the screen size, revise window size 
+base_screen_w = 1920
+base_screen_h = 1080
+base_win_w = 1000
+base_win_h = 920
+screen_w = win.winfo_screenwidth()
+screen_h = win.winfo_screenheight()
+win_w = int(base_win_w * (screen_w / base_screen_w))
+win_h = int(base_win_h * (screen_h / base_screen_h))
+win.geometry(f'{win_w}x{win_h}')
 
 ### TK Variable ###
 # For tab1
 file_path_var = StringVar()
 encoding_var = StringVar()
 output_name_var = StringVar()
+output_dir_var  = StringVar()
+output_dir_var.set(setting['output_dir'])
 open_explorer_var =  tk.BooleanVar()
 auto_extract_var = tk.BooleanVar()
 auto_extract_var.set(True)
@@ -45,6 +59,16 @@ s = ttk.Style()
 s.configure('normal.TButton', font=('courier', 14, 'normal'))
 s.configure('normal.TCheckbutton', font=('courier', 12, 'normal'))
 lableFrame_font = ('courier', 14, 'normal')
+
+def get_output_path():
+    output_dir = output_dir_var.get()
+    if output_dir == "":
+        output_dir = ".\\output"
+    return os.path.join(output_dir, output_name_var.get() )
+def end_with_epub(novel_name:str):
+    if not novel_name.endswith(".epub"):
+        novel_name += '.epub'
+    return novel_name
 
 def extract_and_setpath(input_path:str):
     """
@@ -87,7 +111,8 @@ def select_files():
 
     book_name = simple2Trad(book_name)
     # Set output path
-    output_name_var.set(get_OUTPUT_PATH(book_name))
+
+    output_name_var.set(end_with_epub(book_name))
     # Enable the convert button
     convert_btn['state'] = 'normal'
     clear_text_var(chapter_preview)
@@ -99,7 +124,7 @@ def convert2epub():
 
     clear_text_var(chapter_preview)
     try:
-        chapters = translate_and_convert(FILE_PATH, output_name_var.get())
+        chapters = translate_and_convert(FILE_PATH, get_output_path())
     except UnicodeDecodeError:
         ERROR_MESSAGE['read_error']()
         return
@@ -108,7 +133,7 @@ def convert2epub():
     
     # Open explorer
     if open_explorer_var.get() == True:
-        path = os.path.dirname(output_name_var.get())
+        path = os.path.dirname(output_dir_var.get())
         if path == '':
             path = '.'
         open_explorer(path)
@@ -146,7 +171,7 @@ def select_novel(event):
     download_and_convert_btn['state'] = 'normal' # Enable convert button
     # Set output name
     novel_name = NOVEL_METADATA[SELECTED_IDX]['novel_name']
-    output_name_var.set(get_OUTPUT_PATH(novel_name))
+    output_name_var.set(end_with_epub(novel_name))
 
 def download_and_convert_novel():
     global NOVEL_METADATA, FILE_PATH, SELECTED_IDX
@@ -180,19 +205,25 @@ monty1.grid(column=0, row=0)
 ttk.Button(monty1, text="選擇檔案", command=select_files, style="normal.TButton", width=12).grid(column=0, row=0)
 ttk.Entry(monty1, textvariable=file_path_var, state=tk.DISABLED, width=70, font=13).grid(column=1, row=0, padx=10)
 
-ttk.Label(monty1, text="輸出名稱", font=lableFrame_font).grid(column=0, row=1, pady=10)
-ttk.Entry(monty1, textvariable=output_name_var, width=70, font=13).grid(column=1, row=1, pady=10)
+ttk.Label(monty1, text="輸出目錄", font=lableFrame_font).grid(column=0, row=1, pady=10)
+ttk.Entry(monty1, textvariable=output_dir_var, width=70, font=13).grid(column=1, row=1, pady=10)
+
+ttk.Label(monty1, text="輸出名稱", font=lableFrame_font).grid(column=0, row=2, pady=10)
+ttk.Entry(monty1, textvariable=output_name_var, width=70, font=13).grid(column=1, row=2, pady=10)
+#ttk.Entry(monty1, textvariable=output_name_var, width=70, font=13, state='dis').grid(column=2, row=2, pady=10)
+
+
 
 options = create_label_frame("選項", monty1)
-options.grid(column=0, row=2, columnspan=2, pady=8)
+options.grid(column=0, row=3, columnspan=2, pady=8)
 ttk.Checkbutton(options, text="完成後開啟目錄",variable=open_explorer_var, style="normal.TCheckbutton").grid(column=0, row=0)
 ttk.Checkbutton(options, text="選取後自動解壓縮",variable=auto_extract_var, style="normal.TCheckbutton").grid(column=1, row=0)
 
 convert_btn = ttk.Button(monty1, text="開始轉換", command=convert2epub, state="disable", style="normal.TButton")
-convert_btn.grid(column=0, row=3, columnspan=2,pady=8)
+convert_btn.grid(column=0, row=4, columnspan=2,pady=8)
 
 chapter_preview_frame = create_label_frame("章節預覽", monty1)
-chapter_preview_frame.grid(column=0, row=4, columnspan=2)
+chapter_preview_frame.grid(column=0, row=5, columnspan=2)
 chapter_preview = ScrolledText(chapter_preview_frame, font=5,wrap=tk.WORD)
 chapter_preview.grid(column=0, row=0, columnspan=2, ipady=5)
 
@@ -217,11 +248,17 @@ novel_listbox.grid(column=0, row=1)
 
 download_options = create_label_frame("", monty2)
 download_options.grid(column=0, row=1, columnspan=2)
-ttk.Label(download_options, text="輸出名稱", font=lableFrame_font).grid(column=0, row=0, pady=10, padx=5)
-ttk.Entry(download_options, textvariable=output_name_var, width=70, font=13).grid(column=1, row=0, columnspan=2,pady=10)
+ttk.Label(download_options, text="輸出目錄", font=lableFrame_font).grid(column=0, row=0, pady=10, padx=5)
+ttk.Entry(download_options, textvariable=output_dir_var, width=70, font=13).grid(column=1, row=0, columnspan=2,pady=10)
+ttk.Label(download_options, text="輸出名稱", font=lableFrame_font).grid(column=0, row=1, pady=10, padx=5)
+ttk.Entry(download_options, textvariable=output_name_var, width=70, font=13).grid(column=1, row=1, columnspan=2,pady=10)
+
+ttk.Checkbutton(download_options, text="完成後開啟目錄",variable=open_explorer_var, style="normal.TCheckbutton").grid(column=0, row=2, columnspan=3,pady=10)
+
+
 download_and_convert_btn = ttk.Button(download_options, text="下載並轉換", command=download_and_convert_novel, state="disable", style="normal.TButton", width=12)
-download_and_convert_btn.grid(column=0, row=2, columnspan=3, pady=10)
-ttk.Checkbutton(download_options, text="完成後開啟目錄",variable=open_explorer_var, style="normal.TCheckbutton").grid(column=0, row=1, columnspan=3,pady=10)
+download_and_convert_btn.grid(column=0, row=3, columnspan=3, pady=10)
+
 
 # chapter_preview_frame = create_label_frame("章節預覽", monty2)
 # chapter_preview_frame.grid(column=0, row=2, columnspan=2)

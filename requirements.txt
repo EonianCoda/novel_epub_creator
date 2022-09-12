@@ -11,3 +11,4 @@ google-auth-oauthlib
 discord
 opencc-python-reimplemented
 pyqt
+configparser

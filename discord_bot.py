@@ -3,13 +3,15 @@ import configparser
 from utils.database import Database
 from utils.download import Downloader, create_metadata
 from utils.convert import translate_and_convert
-from utils.config import TMP_TXT_PATH, SOURCE_NAME, GOOGLE_DRIVE_PATH, get_OUTPUT_PATH
+from utils.config import TMP_TXT_PATH, SOURCE_NAME, GOOGLE_DRIVE_PATH, Setting
 from utils.google_drive import upload
 
 DOWNLOADER = Downloader()
 client = discord.Client()
 config = configparser.ConfigParser()
 config.read('./.keys/config.ini')
+
+setting = Setting()
 
 def convert2fullwidth(input_string:str)->str:
     output = []
@@ -141,7 +143,7 @@ async def on_message(message):
 
             # Translate and convert novel
             try:
-                result = translate_and_convert(TMP_TXT_PATH, get_OUTPUT_PATH(novel_name))
+                result = translate_and_convert(TMP_TXT_PATH, setting.get_output_path(novel_name))
             except UnicodeDecodeError:
                 await channel.send(mention_msg(user.id,"亲，檔案解碼失敗，請換個來源试试"))
                 return
@@ -149,7 +151,7 @@ async def on_message(message):
             if result == []:
                 pass
             # Upload file into google drive
-            novel_link = upload(file=download_metedata, local_file_path=get_OUTPUT_PATH(novel_name))
+            novel_link = upload(file=download_metedata, local_file_path=setting.get_output_path(novel_name))
             await channel.send(link_message(user.id, novel_name, novel_link))
    
 if __name__ == "__main__"  : 

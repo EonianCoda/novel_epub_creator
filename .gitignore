@@ -13,4 +13,6 @@ test.txt
 *.ipynb
 *.exe
 *.ui
+*.ini
+*.epub
 tempCodeRunnerFile.py
