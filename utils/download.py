@@ -205,12 +205,15 @@ class Japanese_downloader(object):
         """
         source_idx = metadata['source_idx']
         try:
-            self.downloader[source_idx].download(metadata)
+            success = self.downloader[source_idx].download(metadata)
         # Site can't be reached or no response
         except urllib.error.URLError as e:
             print(f"Some error in download, {e}")
-            return False
-        return True
+            return 1
+        if success:
+            return 0
+        else:
+            return 2
 
 
 class Zxcs_downloader(object):
@@ -654,7 +657,11 @@ class Wenku8_downloader(object):
         # Get download link
         download_url = "https://www.wenku8.net/modules/article/packshow.php?id={}&type=txt".format(novel_idx)
         soup = self.open_url(download_url)
-        files = soup.find("table",class_="grid").find_all('tr')[1:]
+        #This novel has problem
+        files = soup.find("table",class_="grid")
+        if files == None:
+            return False
+        files = files.find_all('tr')[1:]
 
 
         threading.Semaphore(3)
@@ -679,7 +686,7 @@ class Wenku8_downloader(object):
             t.join()
         if download_img:
             self.download_imgs(metadata)
-
+        return True
     def download_img(self, url:str, idx:int):
         soup = self.open_url(url, use_cookie=False)
         imgs = soup.find_all("div", class_="divimage")

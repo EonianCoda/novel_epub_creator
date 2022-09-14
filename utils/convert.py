@@ -85,16 +85,16 @@ def translate_and_convert(input_path:str, output_path:str, white_list:list=[], b
     ebook_creater = Ebook_creater(white_list, black_list, max_chapter_name_len)
     return ebook_creater.create_ebook(lines, output_path,author, imgs_path)
 
+def translate_and_convert_japanese(input_path:str, output_path:str, white_list:list=[], black_list=[], max_chapter_name_len:int=-1, author:str="",imgs_path:str=""):
+    content = read_file(input_path)
+    if content == None:
+        content = read_file_force(input_path, 'utf-8')
 
-# def translate_and_convert_japanese(input_path:str, output_path:str, white_list:list=[], black_list=[], max_chapter_name_len:int=-1):
-#     content = read_file(input_path)
-#     if content == None:
-#         raise UnicodeDecodeError
-#     content = simple2Trad(content)
-#     lines = content.splitlines(True)
+    content = simple2Trad(content)
+    lines = content.splitlines(True)
 
-#     ebook_creater = Ebook_creater(white_list, black_list, max_chapter_name_len)
-#     return ebook_creater.create_ebook(lines, output_path)
+    ebook_creater = Ebook_creater(white_list, black_list, max_chapter_name_len)
+    return ebook_creater.create_ebook(lines, output_path,author, imgs_path)
 
 def simple2Trad(content:str):
     """Translate Simplified Chinese to tradtional Chinese
@@ -130,6 +130,13 @@ def read_file(file_name:str):
             f.close()
 
     return content if flag else None
+
+def read_file_force(file_name:str, encoding:str):
+    """Read file force
+    """
+    f = open(file_name, 'r', encoding=encoding, errors='ignore')
+    content = f.read()
+    return content
 
 
 

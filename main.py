@@ -4,7 +4,7 @@ from tkinter import filedialog as fd
 from tkinter.messagebox import showinfo
 from tkinter.scrolledtext import ScrolledText
 
-from utils.convert import simple2Trad, translate_and_convert
+from utils.convert import simple2Trad, translate_and_convert, translate_and_convert_japanese
 from utils.download import Downloader, Japanese_downloader
 from utils.config import FINDS, JAPANESE_SOURCE_NAME, MAX_CHAPTER_NAME_LEN, TMP_DIRECTORY, TMP_RAR_PATH, TMP_TXT_PATH, SOURCE_NAME
 from utils.config import reset_TMP_DIRECTORY, delete_if_exist, is_compressed_file, Setting
@@ -12,9 +12,9 @@ from utils.tkinter import clear_text_var, open_explorer, create_label_frame
 import os 
 import glob
 import patoolib
-
 ERROR_MESSAGE = {'read_error':lambda : showinfo(title="錯誤",message="無法解析此檔案編碼"),
                  'download_error':lambda : showinfo(title="錯誤",message="下載錯誤"),
+                 'copyright_error':lambda : showinfo(title="訊息",message="該小說有版權問題，無法下載"),
                  'search_error':lambda : showinfo(title="訊息",message="找不到此小說"),
 }
 ### Setting ###
@@ -277,9 +277,12 @@ def download_and_convert_japanese_novel():
     # Get selected novel and its index
 
     # Download novel and convert
-    success = JAPANESE_DOWNLOADER.download(NOVEL_METADATA[SELECTED_IDX])
-    if not success:
-        ERROR_MESSAGE["download_error"]()
+    error_code = JAPANESE_DOWNLOADER.download(NOVEL_METADATA[SELECTED_IDX])
+    if error_code != 0:
+        if error_code == 1:
+            ERROR_MESSAGE["download_error"]()
+        else:
+            ERROR_MESSAGE["copyright_error"]()
         download_and_convert_btn['state'] = 'disable'
         output_name_var.set('')
         return
@@ -292,6 +295,7 @@ def download_and_convert_japanese_novel():
     if author == None:
         author = ""
     books = os.listdir(TMP_DIRECTORY)
+    threads = []
     for book in books:
         path = os.path.join(TMP_DIRECTORY, book)
         files = glob.glob(os.path.join(path,'*.txt'))
@@ -301,16 +305,14 @@ def download_and_convert_japanese_novel():
         if not os.path.exists(imgs_path):
             imgs_path = ""
 
-        
         file_name = os.path.basename(txt_file).replace('.txt','.epub')
         output_path = os.path.join(output_dir, file_name)
-        try:
-            chapters = translate_and_convert(txt_file, output_path, white_list.get("1.0","end-1c").split('\n'), black_list_elements_list, max_chapter_len_var.get(), author, imgs_path)
-        except UnicodeDecodeError:
-            ERROR_MESSAGE['read_error']()
-            return
+        translate_and_convert_japanese(txt_file, output_path, white_list.get("1.0","end-1c").split('\n'), black_list_elements_list, max_chapter_len_var.get(), author, imgs_path)
 
-    chapter_preview.insert(tk.INSERT, "".join(chapters))
+    for t in threads:
+        t.start() 
+    for t in threads:
+        t.join()
     showinfo(title="訊息",message="轉換成功")
     
     # Open explorer
