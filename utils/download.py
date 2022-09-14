@@ -19,6 +19,7 @@ import requests
 from requests.cookies import RequestsCookieJar
 import pickle
 import time
+import threading
 WENKU8_COOKIE_FILE = "wenku8_cookie.pickle"
 
 
@@ -623,7 +624,7 @@ class Wenku8_downloader(object):
             novel_name = simple2Trad(l.get('title'))
             url = l.get('href')
             novel_idx = url.split('/')[-1].split('.')[0]
-            novels_metadata.append(create_metadata(novel_name, novel_idx,author=author))
+            novels_metadata.append(create_metadata(novel_name, novel_idx,author=simple2Trad(author)))
             
         num_pages = soup.find("div", id="pagelink").find_all('a')[-1].text
         
@@ -655,6 +656,10 @@ class Wenku8_downloader(object):
         soup = self.open_url(download_url)
         files = soup.find("table",class_="grid").find_all('tr')[1:]
 
+
+        threading.Semaphore(3)
+        threads = []
+        
         reset_TMP_DIRECTORY()
         for i, f in enumerate(files):
             chapter_name = simple2Trad(f.find('td').text)
@@ -663,13 +668,19 @@ class Wenku8_downloader(object):
 
             # Create directory for this chapter
             path = os.path.join(TMP_DIRECTORY, str(i))
-            os.makedirs(path, exist_ok = True) 
-            self.download_file(url, file_name, path)
+            os.makedirs(path, exist_ok = True)
+
+            t = threading.Thread(target=self.download_file, args=(url, file_name, path))
+            threads.append(t)
         
+        for t in threads:
+            t.start() 
+        for t in threads:
+            t.join()
         if download_img:
             self.download_imgs(metadata)
 
-    def download_img(self, url:str, idx:int, idx_start:int):
+    def download_img(self, url:str, idx:int):
         soup = self.open_url(url, use_cookie=False)
         imgs = soup.find_all("div", class_="divimage")
         imgs = [img.find('a').get('href') for img in imgs]
@@ -678,8 +689,8 @@ class Wenku8_downloader(object):
         img_path = os.path.join(TMP_DIRECTORY, str(idx), 'imgs')
         os.makedirs(img_path, exist_ok = True)
         for i, img in enumerate(imgs):
-            self.download_file(img, f"{i+idx_start}.jpg", img_path)
-            time.sleep(0.1)
+            self.download_file(img, f"{i}.jpg", img_path)
+            #time.sleep(0.1)
         return len(imgs)
         
     def download_imgs(self, metadata:dict):
@@ -706,12 +717,18 @@ class Wenku8_downloader(object):
         base_url = '/'.join(index_url.split('/')[:-1]) 
         base_url += '/'
 
+        threading.Semaphore(3)
+        threads = []
         for chapter_idx in range(num_chapters):
             if len(img_urls[chapter_idx]) == 0:
                 continue
             # Download img one by one
-            img_idx = 0
-            for url in img_urls[chapter_idx]:
-                url = base_url + url
-                num_imgs = self.download_img(url, chapter_idx, img_idx)
-                img_idx += num_imgs
+            url = base_url + img_urls[chapter_idx][0]
+            t = threading.Thread(target=self.download_img, args=(url, chapter_idx))
+            threads.append(t)
+
+
+        for t in threads:
+            t.start() 
+        for t in threads:
+            t.join()
