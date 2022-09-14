@@ -94,7 +94,7 @@ class Downloader(object):
     def __init__(self, search_all_source=False, use_database=USE_DATABASE):
         self.downloader = {'Zxcs': Zxcs_downloader(),     # 知軒藏書
                             'Mijjxswco':Mijjxswco_downloader(),  # 久久小說下載網
-                            'Ijjxs':Ijjxs_downloader(), # 愛久久小說下載網
+                            # 'Ijjxs':Ijjxs_downloader(), # 愛久久小說下載網
                             # 'Qiuyewx':Qiuyewx_downloader(), # 平板电子书网
                             #'Qinkan':Qinkan_downloader(),  # 請看小說網
                             'Xsla':Xsla_downloader(), }  # 八零电子书 (Too slow)
