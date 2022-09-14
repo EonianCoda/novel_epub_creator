@@ -4,17 +4,17 @@ from tkinter import filedialog as fd
 from tkinter.messagebox import showinfo
 from tkinter.scrolledtext import ScrolledText
 
-from utils.convert import simple2Trad, translate_and_convert
-from utils.download import Downloader
-from utils.config import FINDS, MAX_CHAPTER_NAME_LEN, TMP_DIRECTORY, TMP_RAR_PATH, TMP_TXT_PATH, SOURCE_NAME
+from utils.convert import simple2Trad, translate_and_convert, translate_and_convert_japanese
+from utils.download import Downloader, Japanese_downloader
+from utils.config import FINDS, JAPANESE_SOURCE_NAME, MAX_CHAPTER_NAME_LEN, TMP_DIRECTORY, TMP_RAR_PATH, TMP_TXT_PATH, SOURCE_NAME
 from utils.config import reset_TMP_DIRECTORY, delete_if_exist, is_compressed_file, Setting
 from utils.tkinter import clear_text_var, open_explorer, create_label_frame
 import os 
 import glob
 import patoolib
-
 ERROR_MESSAGE = {'read_error':lambda : showinfo(title="錯誤",message="無法解析此檔案編碼"),
                  'download_error':lambda : showinfo(title="錯誤",message="下載錯誤"),
+                 'copyright_error':lambda : showinfo(title="訊息",message="該小說有版權問題，無法下載"),
                  'search_error':lambda : showinfo(title="訊息",message="找不到此小說"),
 }
 ### Setting ###
@@ -24,6 +24,7 @@ setting = Setting()
 FILE_PATH = ""
 NOVEL_METADATA = []
 DOWNLOADER = Downloader()
+JAPANESE_DOWNLOADER = Japanese_downloader()
 SELECTED_IDX = -1
 BLACKED_ELEMENT_SELECTED_IDX = -1
 # Windows
@@ -62,6 +63,7 @@ auto_extract_var.set(True)
 auto_convert_var = tk.BooleanVar()
 auto_convert_var.set(False)
 
+
 ## For tab2
 search_var = StringVar()
 selected_novel_var = tk.StringVar()
@@ -79,6 +81,12 @@ black_list_elements = tk.StringVar(value=black_list_elements_list)
 
 ## For tab4
 multi_file_paths = []
+
+## For tab5
+selected_japanese_novel_var = tk.StringVar()
+auto_download_japanese_var = tk.BooleanVar()
+auto_download_japanese_var.set(False)
+
 def get_output_path():
     output_dir = output_dir_var.get()
     if output_dir == "":
@@ -188,11 +196,46 @@ def search_novel():
     # Set button state
     download_and_convert_btn['state'] = 'disable'
 
+def search_japanese_novel():
+    global NOVEL_METADATA, JAPANESE_DOWNLOADER, SELECTED_IDX
+    
+    keyword = search_var.get()
+    if keyword == "":
+        return
+    result = JAPANESE_DOWNLOADER.search(keyword)
+    # Not found
+    if result == None:
+        ERROR_MESSAGE["search_error"]()
+        # Reset variable
+        selected_japanese_novel_var.set([])
+        output_name_var.set('')
+        # Disable button
+        download_and_convert_btn['state'] = 'disable'
+        return
+    NOVEL_METADATA = result
+    novel_names = []
+    for idx, metadata in enumerate(NOVEL_METADATA):
+        novel_name = metadata['novel_name']
+        author = metadata['author']
+        if author == None:
+            author = "None"
+        source_name = JAPANESE_SOURCE_NAME[metadata['source_idx']]
+        novel_names.append(f"{idx} {novel_name} ({source_name}, 作者:{author})")
+    selected_japanese_novel_var.set(novel_names)
+    # Set button state
+    download_and_convert_btn['state'] = 'disable'
+
+    if auto_download_japanese_var.get() and len(NOVEL_METADATA) == 1:
+        SELECTED_IDX = 0
+        novel_name = NOVEL_METADATA[SELECTED_IDX]['novel_name']
+        output_name_var.set(novel_name)
+        download_and_convert_japanese_novel()
+
 def select_novel(event):
     """確定選取
     """
     global NOVEL_METADATA, SELECTED_IDX
-    if len(NOVEL_METADATA) == 0:
+    if len(NOVEL_METADATA) == 0 or len(novel_listbox.curselection()) == 0:
         return
 
     SELECTED_IDX = novel_listbox.curselection()[0]
@@ -201,8 +244,20 @@ def select_novel(event):
     novel_name = NOVEL_METADATA[SELECTED_IDX]['novel_name']
     output_name_var.set(end_with_epub(novel_name))
 
+def select_japanese_novel(event):
+    """確定選取
+    """
+    global NOVEL_METADATA, SELECTED_IDX
+    if len(NOVEL_METADATA) == 0 or len(japanese_novel_listbox.curselection()) == 0:
+        return
+    SELECTED_IDX = japanese_novel_listbox.curselection()[0]
+    download_and_convert_japanese_btn['state'] = 'normal' # Enable convert button
+    # Set output name
+    novel_name = NOVEL_METADATA[SELECTED_IDX]['novel_name']
+    output_name_var.set(novel_name)
+
 def download_and_convert_novel():
-    global NOVEL_METADATA, FILE_PATH, SELECTED_IDX
+    global NOVEL_METADATA, FILE_PATH, SELECTED_IDX, DOWNLOADER
     # Get selected novel and its index
 
     # Download novel and convert
@@ -217,18 +272,109 @@ def download_and_convert_novel():
     if NOVEL_METADATA[SELECTED_IDX]['source_idx'] == 0:
         delete_if_exist(TMP_RAR_PATH)
 
+def download_and_convert_japanese_novel():
+    global NOVEL_METADATA, SELECTED_IDX, JAPANESE_DOWNLOADER
+    # Get selected novel and its index
+
+    # Download novel and convert
+    error_code = JAPANESE_DOWNLOADER.download(NOVEL_METADATA[SELECTED_IDX])
+    if error_code != 0:
+        if error_code == 1:
+            ERROR_MESSAGE["download_error"]()
+        else:
+            ERROR_MESSAGE["copyright_error"]()
+        download_and_convert_btn['state'] = 'disable'
+        output_name_var.set('')
+        return
+
+    # output dir
+    output_dir = output_dir_var.get()
+    if output_dir == "":
+        output_dir = ".\\output"
+    author = NOVEL_METADATA[SELECTED_IDX]['author']
+    if author == None:
+        author = ""
+    books = os.listdir(TMP_DIRECTORY)
+    threads = []
+    for book in books:
+        path = os.path.join(TMP_DIRECTORY, book)
+        files = glob.glob(os.path.join(path,'*.txt'))
+        txt_file = files[0]
+        # This book has images
+        imgs_path = os.path.join(path, 'imgs')
+        if not os.path.exists(imgs_path):
+            imgs_path = ""
+
+        file_name = os.path.basename(txt_file).replace('.txt','.epub')
+        output_path = os.path.join(output_dir, file_name)
+        translate_and_convert_japanese(txt_file, output_path, white_list.get("1.0","end-1c").split('\n'), black_list_elements_list, max_chapter_len_var.get(), author, imgs_path)
+
+    for t in threads:
+        t.start() 
+    for t in threads:
+        t.join()
+    showinfo(title="訊息",message="轉換成功")
+    
+    # Open explorer
+    if open_explorer_var.get() == True:
+        path = output_dir_var.get()
+        if path == '':
+            path = '.'
+        open_explorer(path)
+
+
 
 ### Control ###
 tabControl = ttk.Notebook(win)
 tab1 = ttk.Frame(tabControl)
 tabControl.add(tab1, text="epub轉換")
 tab2 = ttk.Frame(tabControl)
-tabControl.add(tab2, text="下載小說")
+tabControl.add(tab2, text="中國小說")
 tab3 = ttk.Frame(tabControl)
 tabControl.add(tab3, text="設定")
 tab4 = ttk.Frame(tabControl)
 tabControl.add(tab4, text="批量轉換")
+tab5 = ttk.Frame(tabControl)
+tabControl.add(tab5, text="日輕下載")
 tabControl.pack(expand=1,fill="both")
+
+
+### Tab5: Download japenese novel ###
+monty5 = ttk.LabelFrame(tab5)
+monty5.grid(column=0, row=0)
+
+search_frame = create_label_frame("搜尋", monty5)
+search_frame.grid(column=0, row=0, columnspan=2)
+ttk.Entry(search_frame, textvariable=search_var, width=70, font=12).grid(column=0, row=0, padx=10)
+ttk.Button(search_frame, text="搜尋", command=search_japanese_novel, style="normal.TButton", width=12).grid(column=1, row=0)
+
+search_result_frame = create_label_frame("搜尋結果", search_frame)
+search_result_frame.grid(column=0, row=1, columnspan=2)
+
+
+# Novel List box
+japanese_novel_listbox = tk.Listbox(search_result_frame, listvariable=selected_japanese_novel_var, font=10, selectbackground="blue", selectmode="single", width=80)
+japanese_novel_listbox.bind("<<ListboxSelect>>", select_japanese_novel)
+japanese_novel_listbox.grid(column=0, row=1)
+
+
+download_options = create_label_frame("", monty5)
+download_options.grid(column=0, row=1, columnspan=2)
+ttk.Label(download_options, text="輸出目錄", font=lableFrame_font).grid(column=0, row=0, pady=10, padx=5)
+ttk.Entry(download_options, textvariable=output_dir_var, width=70, font=13).grid(column=1, row=0, columnspan=2,pady=10)
+ttk.Label(download_options, text="下載項目", font=lableFrame_font).grid(column=0, row=1, pady=10, padx=5)
+ttk.Entry(download_options, textvariable=output_name_var, width=70, font=13).grid(column=1, row=1, columnspan=2,pady=10)
+
+options = create_label_frame("選項", download_options)
+options.grid(column=0, row=2, columnspan=3, pady=8)
+ttk.Checkbutton(options, text="完成後開啟目錄",variable=open_explorer_var, style="normal.TCheckbutton").grid(column=0, row=0)
+ttk.Checkbutton(options, text="只有一結果時直接下載",variable=auto_download_japanese_var, style="normal.TCheckbutton").grid(column=1, row=0)
+ttk.Checkbutton(options, text="整合全卷",variable=auto_convert_var, style="normal.TCheckbutton").grid(column=2, row=0)
+
+
+download_and_convert_japanese_btn = ttk.Button(download_options, text="下載並轉換", command=download_and_convert_japanese_novel, state="disable", style="normal.TButton", width=12)
+download_and_convert_japanese_btn.grid(column=0, row=3, columnspan=3, pady=10)
+
 
 ### Tab1: Convert epub ###
 monty1 = ttk.LabelFrame(tab1)

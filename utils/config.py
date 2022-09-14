@@ -67,6 +67,10 @@ DATABASE_VERSION = "./.database/version"
 SEARCH_RESULTS_JSON = "./.database/search_results.json"
 DOWNLOAD_RESULTS_JSON = "./.database/download_results.json"
 
+SEARCH_JAPANESE_RESULTS_JSON = "./.database/search_japenese_results.json"
+DOWNLOAD_JAPANESE_RESULTS_JSON = "./.database/download_japenese_results.json"
+
+
 ### Function variable ###
 SOURCE_NAME = {'Zxcs':'知軒藏書',
                 'Mijjxswco':'久久小說網',
@@ -76,6 +80,7 @@ SOURCE_NAME = {'Zxcs':'知軒藏書',
                 'Xsla':'八零電子書',
                 }
 
+JAPANESE_SOURCE_NAME = {'Wenku8': '輕小說文庫',}
 ### For convert ###
 MAX_CHAPTER_NAME_LEN = 35
 MIN_FIND_NOVELS = 15

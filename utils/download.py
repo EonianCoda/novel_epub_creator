@@ -15,6 +15,14 @@ from utils.database import Database
 from utils.config import TMP_DIRECTORY, TMP_TXT_PATH, TMP_RAR_PATH, TMP_ZIP_PATH, USE_DATABASE, reset_TMP_DIRECTORY
 from utils.convert import simple2Trad, Trad2simple
 
+import requests
+from requests.cookies import RequestsCookieJar
+import pickle
+import time
+import threading
+WENKU8_COOKIE_FILE = "wenku8_cookie.pickle"
+
+
 
 def open_url(url, decode=True, post_data=None, return_response=False):
     """
@@ -73,7 +81,7 @@ def encode_chinese(data, is_post_data=False, encoding="utf-8"):
     else:
         return quote(data, safe=SAFE_LETTER)
 
-def create_metadata(novel_name:str, novel_idx:int, source_idx:str=None):
+def create_metadata(novel_name:str, novel_idx:int, source_idx:str=None, author:str=None):
     """Create metadata for downloader
     Args:
         novel_name: the name of the novel
@@ -81,7 +89,8 @@ def create_metadata(novel_name:str, novel_idx:int, source_idx:str=None):
     """
     metadata = {'novel_name': novel_name, 
                 'novel_idx': int(novel_idx), 
-                'source_idx': source_idx}
+                'source_idx': source_idx,
+                'author': author}
     return metadata
 
 def all_match(metadatas:list, keyword:str):
@@ -123,11 +132,6 @@ class Downloader(object):
                 for metadata in metadatas:
                     metadata['source_idx'] = source_idx
                 novels_metadata.extend(metadatas)
-                # cond = len(novels_metadata) >= MAX_FIND_NOVELS_IF_NOT_MATCH
-                # if cond or (self.search_all_source == False and len(novels_metadata) >= MIN_FIND_NOVELS) or all_match(novels_metadata, key_word):
-                #     if self.use_database:
-                #         self.database.add_search(key_word, novels_metadata)
-                #     return novels_metadata
 
         if len(novels_metadata) != 0:
             if self.use_database:
@@ -153,6 +157,64 @@ class Downloader(object):
             print(f"Some error in download, {e}")
             return False
         return True
+
+class Japanese_downloader(object):
+    def __init__(self, search_all_source=False, use_database=USE_DATABASE):
+        self.downloader = {'Wenku8': Wenku8_downloader(),}     # 輕小說文庫
+        self.search_all_source = search_all_source
+        self.use_database = use_database
+        if self.use_database:
+            self.database = Database(is_japanese=True)
+    def search(self, key_word:str) -> list:
+        """Search novel by key word
+        Args:
+            key_word: the key word for search
+        Return:
+            a list of all result's metadatas
+        """
+        # If use database, then search database by keyword
+        if self.use_database:
+            result = self.database.get_search(key_word)
+            # If find, then return
+            if result != None:
+                return result
+        novels_metadata = []
+        for source_idx, downloader in self.downloader.items():
+            metadatas = downloader.search(key_word)
+            if metadatas != None:
+                # add source_idx
+                for metadata in metadatas:
+                    metadata['source_idx'] = source_idx
+                novels_metadata.extend(metadatas)
+
+        if len(novels_metadata) != 0:
+            if self.use_database:
+                self.database.add_search(key_word, novels_metadata)
+            return novels_metadata
+        else:
+            if self.use_database:
+                self.database.add_search(key_word, None)
+            return None
+
+    def download(self, metadata:dict) -> bool:
+        """
+        Args:
+            metadata: tuple of a book's metadata
+        Return:
+            If success downloader, return True, else return False
+        """
+        source_idx = metadata['source_idx']
+        try:
+            success = self.downloader[source_idx].download(metadata)
+        # Site can't be reached or no response
+        except urllib.error.URLError as e:
+            print(f"Some error in download, {e}")
+            return 1
+        if success:
+            return 0
+        else:
+            return 2
+
 
 class Zxcs_downloader(object):
     """Download novel from websit: http://zxcs.me/ (知軒藏書)
@@ -461,3 +523,219 @@ class Xsla_downloader(object):
         # Download zip
         download_file(download_url, TMP_ZIP_PATH)
         extract_and_move_file(is_rar=False)
+
+class Wenku8_downloader(object):
+    """Download novel from websit: https://www.wenku8.net/ (輕小說文庫)
+    """
+    def __init__(self):
+        self.base_url = "https://www.wenku8.net/modules/article/search.php?searchtype=articlename&searchkey={}&page={}"
+        self.search_url = lambda key, p : self.base_url.format(quote(Trad2simple(key).encode('gbk')), p)
+        self.latex_book_url = "https://www.wenku8.net/modules/article/toplist.php?sort=lastupdate"
+        self._load_cookie()
+
+    @staticmethod
+    def _dump_cookie():
+        cookie = "Input your cookie"
+        temp = cookie.split('\n')[1:-1]
+        cookies = []
+        for c in temp:
+            cookies.append(c.split('\t'))
+        cookie_jar = RequestsCookieJar()
+        for c in cookies:
+            cookie_jar.set(c[0], c[1], domain=c[2])
+
+        with open(WENKU8_COOKIE_FILE,'wb') as f:
+            pickle.dump(cookie_jar, f)
+
+    def _load_cookie(self):
+        if not os.path.isfile(WENKU8_COOKIE_FILE):
+            raise ValueError("Weku8 cookie file does not exist!")
+        #Load cookie
+        with open(WENKU8_COOKIE_FILE,'rb') as f:
+            self.cookie = pickle.load(f)
+    def __str__(self) -> str:
+        return "Wenku8"
+
+    def open_url(self, url, decode=True, post_data=None, return_response=False, use_cookie=True, return_url=False):
+        """
+        Args:
+            url: url
+            decode: boolean, whether decode the html
+        Return: if decode is True, then return BeautifulSoup, else return bytes
+        """
+        
+        headers={'User-Agent':UserAgent().edge}
+        # decode html for search
+
+        if use_cookie:
+            response = requests.get(url, cookies=self.cookie, headers=headers)
+        else:
+            response = requests.get(url, headers=headers)
+        if return_response:
+            return response
+
+        content = response.content
+        # for download file 
+        if not decode:
+            return content
+        else:
+            encodings = ['utf-8','gb2312','gb18030']
+            for encoding in encodings:
+                try:
+                    html = content.decode(encoding)
+                    if return_url:
+                        return BeautifulSoup(html, 'html.parser'), response.url
+                    else:
+                        return BeautifulSoup(html, 'html.parser')
+                except UnicodeDecodeError:
+                    continue
+            html = content.decode('gb18030','ignore')
+            if return_url:
+                return BeautifulSoup(html, 'html.parser'), response.url
+            else:
+                return BeautifulSoup(html, 'html.parser')
+
+    def search_page(self, key_word:str, page=1):
+        """Search novel with key word for one page
+        Return:
+            if not found return None, else return dict: {novel_name:novel_idx}
+        """
+        soup, url = self.open_url(self.search_url(key_word, page), return_url=True)
+
+        # Only one result
+        if ".net/book/" in url:
+            novel_name = simple2Trad(soup.find('table').find('b').text)
+            author = soup.find('table').find_all('td')[4].text.split('：')[1]
+            novel_idx = url.split('/')[-1].split('.')[0]
+
+            novels_metadata = [create_metadata(novel_name, novel_idx,author=author)]
+            return novels_metadata, 1
+
+        link_list = soup.find('table').find_all('b')
+        if link_list == []:
+            return None
+        # Get authors
+        authors = []
+        targets = soup.find('table').find_all('p')
+        for i in range(0, len(targets), 5):
+            authors.append(targets[i].text.split('/')[0][3:])
+
+        # Get novel name and their index
+        novels_metadata = []
+        for author, l in zip(authors, link_list):
+            l = l.find('a')
+            novel_name = simple2Trad(l.get('title'))
+            url = l.get('href')
+            novel_idx = url.split('/')[-1].split('.')[0]
+            novels_metadata.append(create_metadata(novel_name, novel_idx,author=simple2Trad(author)))
+            
+        num_pages = soup.find("div", id="pagelink").find_all('a')[-1].text
+        
+        return novels_metadata, int(num_pages)
+    def search(self, key_word:str):
+        result = self.search_page(key_word, page=1)
+        if result == None:
+            return None
+
+        novels_metadatas, num_pages = result
+        if num_pages != 1:
+            for i in range(1, num_pages + 1):
+                time.sleep(5)
+                result = self.search_page(key_word, i)
+                if result == None:
+                    continue
+                novels_metadata, _ = result
+                novels_metadatas.extend(novels_metadata)
+        return novels_metadatas
+    def download_file(self, url, file_name:str, output_dir:str):
+        file = self.open_url(url, decode=False, use_cookie=False)
+        with open(os.path.join(output_dir,file_name), 'wb') as f:
+            f.write(file)
+
+    def download(self, metadata:dict, download_img=True):
+        novel_name, novel_idx = metadata['novel_name'], metadata['novel_idx']
+        # Get download link
+        download_url = "https://www.wenku8.net/modules/article/packshow.php?id={}&type=txt".format(novel_idx)
+        soup = self.open_url(download_url)
+        #This novel has problem
+        files = soup.find("table",class_="grid")
+        if files == None:
+            return False
+        files = files.find_all('tr')[1:]
+
+
+        threading.Semaphore(3)
+        threads = []
+        
+        reset_TMP_DIRECTORY()
+        for i, f in enumerate(files):
+            chapter_name = simple2Trad(f.find('td').text)
+            file_name =  f"{novel_name} {chapter_name}.txt"
+            url =  f.find_all('a')[2].get('href')
+
+            # Create directory for this chapter
+            path = os.path.join(TMP_DIRECTORY, str(i))
+            os.makedirs(path, exist_ok = True)
+
+            t = threading.Thread(target=self.download_file, args=(url, file_name, path))
+            threads.append(t)
+        
+        for t in threads:
+            t.start() 
+        for t in threads:
+            t.join()
+        if download_img:
+            self.download_imgs(metadata)
+        return True
+    def download_img(self, url:str, idx:int):
+        soup = self.open_url(url, use_cookie=False)
+        imgs = soup.find_all("div", class_="divimage")
+        imgs = [img.find('a').get('href') for img in imgs]
+        
+        # Create directory for storing images
+        img_path = os.path.join(TMP_DIRECTORY, str(idx), 'imgs')
+        os.makedirs(img_path, exist_ok = True)
+        for i, img in enumerate(imgs):
+            self.download_file(img, f"{i}.jpg", img_path)
+            #time.sleep(0.1)
+        return len(imgs)
+        
+    def download_imgs(self, metadata:dict):
+        novel_name, novel_idx = metadata['novel_name'], metadata['novel_idx']
+        url = "https://www.wenku8.net/book/{}.htm".format(novel_idx)
+        soup = self.open_url(url, use_cookie=False)
+
+        index_url = soup.find('div',id="content").find_all("a")[4].get('href')
+        soup = self.open_url(index_url, use_cookie=False)
+        chapter_titles = soup.find('table').find_all('td',class_="vcss")
+        chapter_titles = [c.text for c in chapter_titles]
+        num_chapters = len(chapter_titles)
+
+        from collections import defaultdict
+        all_titles = soup.find('table').find_all('td')
+        idx = 0
+        img_urls = defaultdict(list)
+        for t in all_titles:
+            if idx < len(chapter_titles) and t.text == chapter_titles[idx]:
+                idx += 1
+            if t.text == "插圖" or t.text == "插图":
+                img_urls[idx - 1].append(t.find('a').get('href'))
+
+        base_url = '/'.join(index_url.split('/')[:-1]) 
+        base_url += '/'
+
+        threading.Semaphore(3)
+        threads = []
+        for chapter_idx in range(num_chapters):
+            if len(img_urls[chapter_idx]) == 0:
+                continue
+            # Download img one by one
+            url = base_url + img_urls[chapter_idx][0]
+            t = threading.Thread(target=self.download_img, args=(url, chapter_idx))
+            threads.append(t)
+
+
+        for t in threads:
+            t.start() 
+        for t in threads:
+            t.join()

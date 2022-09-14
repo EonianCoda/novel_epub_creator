@@ -34,7 +34,7 @@ class Ebook_creater(object):
                 return search
         return False
     
-    def create_ebook(self, lines:list, output_name:str):
+    def create_ebook(self, lines:list, output_name:str, author:str="", imgs_path:str=""):
         """Create an Ebook
         Args:
             book_name : the name of the book(inner name)
@@ -43,8 +43,8 @@ class Ebook_creater(object):
             list of the chapter names of the book
         """
         # Create new book
-        book_name = os.path.basename(output_name).replace('.epub','')
-        book = Ebook(name=book_name)
+        #book_name = os.path.basename(output_name).replace('.epub','')
+        book = Ebook()
 
         content = "<p>" # the content of the chapter
         chapter_name = "" # the name of the chapter
@@ -67,11 +67,15 @@ class Ebook_creater(object):
         content += "</p>"
         book.add_chapter(chapter_name, content)
 
+        if imgs_path != "":
+            book.set_cover( os.path.join(imgs_path, "0.jpg"))
+            book.add_image_page(imgs_path, True)
+
         # Output book
-        book.write(output_name)
+        book.write(output_name, author)
         return chapter_names
 
-def translate_and_convert(input_path:str, output_path:str, white_list:list=[], black_list=[], max_chapter_name_len:int=-1):
+def translate_and_convert(input_path:str, output_path:str, white_list:list=[], black_list=[], max_chapter_name_len:int=-1, author:str="",imgs_path:str=""):
     content = read_file(input_path)
     if content == None:
         raise UnicodeDecodeError
@@ -79,7 +83,19 @@ def translate_and_convert(input_path:str, output_path:str, white_list:list=[], b
     lines = content.splitlines(True)
 
     ebook_creater = Ebook_creater(white_list, black_list, max_chapter_name_len)
-    return ebook_creater.create_ebook(lines, output_path)
+    return ebook_creater.create_ebook(lines, output_path,author, imgs_path)
+
+def translate_and_convert_japanese(input_path:str, output_path:str, white_list:list=[], black_list=[], max_chapter_name_len:int=-1, author:str="",imgs_path:str=""):
+    content = read_file(input_path)
+    if content == None:
+        content = read_file_force(input_path, 'utf-8')
+
+    content = simple2Trad(content)
+    lines = content.splitlines(True)
+
+    ebook_creater = Ebook_creater(white_list, black_list, max_chapter_name_len)
+    return ebook_creater.create_ebook(lines, output_path,author, imgs_path)
+
 def simple2Trad(content:str):
     """Translate Simplified Chinese to tradtional Chinese
     Args:
@@ -114,6 +130,13 @@ def read_file(file_name:str):
             f.close()
 
     return content if flag else None
+
+def read_file_force(file_name:str, encoding:str):
+    """Read file force
+    """
+    f = open(file_name, 'r', encoding=encoding, errors='ignore')
+    content = f.read()
+    return content
 
 
 
