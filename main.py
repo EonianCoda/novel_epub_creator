@@ -3,7 +3,6 @@ from tkinter import ttk, StringVar
 from tkinter import filedialog as fd
 from tkinter.messagebox import showinfo
 from tkinter.scrolledtext import ScrolledText
-
 from utils.convert import simple2Trad, translate_and_convert, translate_and_convert_japanese
 from utils.download import Downloader, Japanese_downloader
 from utils.config import FINDS, JAPANESE_SOURCE_NAME, MAX_CHAPTER_NAME_LEN, TMP_DIRECTORY, TMP_RAR_PATH, TMP_TXT_PATH, SOURCE_NAME
@@ -12,6 +11,8 @@ from utils.tkinter import clear_text_var, open_explorer, create_label_frame
 import os 
 import glob
 import patoolib
+
+### Error Message ###
 ERROR_MESSAGE = {'read_error':lambda : showinfo(title="錯誤",message="無法解析此檔案編碼"),
                  'download_error':lambda : showinfo(title="錯誤",message="下載錯誤"),
                  'copyright_error':lambda : showinfo(title="訊息",message="該小說有版權問題，無法下載"),
@@ -27,11 +28,12 @@ DOWNLOADER = Downloader()
 JAPANESE_DOWNLOADER = Japanese_downloader()
 SELECTED_IDX = -1
 BLACKED_ELEMENT_SELECTED_IDX = -1
-# Windows
+
+### Windows ###
 win = tk.Tk()
 win.title('Ebook Creator')
 win.resizable(False, False)
-# According of the screen size, revise window size 
+# Revise window size depending the size of the screen 
 base_screen_w = 1920
 base_screen_h = 1080
 base_win_w = 800
@@ -40,33 +42,7 @@ screen_w = win.winfo_screenwidth()
 screen_h = win.winfo_screenheight()
 win_w = int(base_win_w * (screen_w / base_screen_w))
 win_h = int(base_win_h * (screen_h / base_screen_h))
-win.geometry(f'{win_w}x{win_h}')
-
-### TK Variable ###
-## For tab1
-file_path_var = StringVar()
-encoding_var = StringVar()
-output_name_var = StringVar()
-output_dir_var  = StringVar()
-output_dir_var.set(setting['output_dir'])
-
-input_dir  = StringVar()
-input_dir.set(setting['input_dir'])
-
-# Output setting
-max_chapter_len_var = tk.IntVar()
-max_chapter_len_var.set(MAX_CHAPTER_NAME_LEN)
-#Options
-open_explorer_var =  tk.BooleanVar()
-auto_extract_var = tk.BooleanVar()
-auto_extract_var.set(True)
-auto_convert_var = tk.BooleanVar()
-auto_convert_var.set(False)
-
-
-## For tab2
-search_var = StringVar()
-selected_novel_var = tk.StringVar()
+win.geometry(f'{win_w}x{win_h}') # set application window size
 
 ### Set Style ###
 s = ttk.Style() 
@@ -74,11 +50,39 @@ s.configure('normal.TButton', font=('courier', 14, 'normal'))
 s.configure('normal.TCheckbutton', font=('courier', 12, 'normal'))
 lableFrame_font = ('courier', 14, 'normal')
 
-## For tab3
+
+### Tkinter Variable ###
+## For tab1(Convert epub)
+file_path_var = StringVar()
+encoding_var = StringVar()
+output_name_var = StringVar()
+# Output directory
+output_dir_var  = StringVar()
+output_dir_var.set(setting['output_dir'])
+# Input directory for select file
+input_dir  = StringVar()
+input_dir.set(setting['input_dir'])
+# Output setting
+max_chapter_len_var = tk.IntVar()
+max_chapter_len_var.set(MAX_CHAPTER_NAME_LEN)
+# Options
+open_explorer_var =  tk.BooleanVar()
+auto_extract_var = tk.BooleanVar()
+auto_extract_var.set(True)
+auto_convert_var = tk.BooleanVar()
+auto_convert_var.set(False)
+
+## For tab2(Search China novel)
+search_var = StringVar()
+selected_novel_var = tk.StringVar()
+
+## For tab3(Setting)
 new_black_list_element = tk.StringVar()
 black_list_elements_list = []
 black_list_elements = tk.StringVar(value=black_list_elements_list)
-
+# Output setting
+max_chapter_len_var = tk.IntVar()
+max_chapter_len_var.set(MAX_CHAPTER_NAME_LEN)
 ## For tab4
 multi_file_paths = []
 
@@ -86,6 +90,7 @@ multi_file_paths = []
 selected_japanese_novel_var = tk.StringVar()
 auto_download_japanese_var = tk.BooleanVar()
 auto_download_japanese_var.set(False)
+output_japanese_name_var = tk.StringVar()
 
 def get_output_path():
     output_dir = output_dir_var.get()
@@ -229,6 +234,7 @@ def search_japanese_novel():
         SELECTED_IDX = 0
         novel_name = NOVEL_METADATA[SELECTED_IDX]['novel_name']
         output_name_var.set(novel_name)
+        output_japanese_name_var.set(novel_name)
         download_and_convert_japanese_novel()
 
 def select_novel(event):
@@ -255,6 +261,7 @@ def select_japanese_novel(event):
     # Set output name
     novel_name = NOVEL_METADATA[SELECTED_IDX]['novel_name']
     output_name_var.set(novel_name)
+    output_japanese_name_var.set(novel_name)
 
 def download_and_convert_novel():
     global NOVEL_METADATA, FILE_PATH, SELECTED_IDX, DOWNLOADER
@@ -291,7 +298,7 @@ def download_and_convert_japanese_novel():
     output_dir = output_dir_var.get()
     if output_dir == "":
         output_dir = ".\\output"
-    output_dir = os.path.join(output_dir, output_name_var.get())
+    output_dir = os.path.join(output_dir, output_japanese_name_var.get())
     os.makedirs(output_dir, exist_ok=True)
     # Get author
     author = NOVEL_METADATA[SELECTED_IDX]['author']
@@ -309,7 +316,7 @@ def download_and_convert_japanese_novel():
             imgs_path = ""
         # Get file_name(e.g 第一卷.txt、第三卷.txt), and then convert it to  novel_name + chapter_name
         file_name = os.path.basename(txt_file).replace('.txt','.epub')
-        file_name = output_name_var.get() + ' '+ file_name
+        file_name = output_japanese_name_var.get() + ' '+ file_name
         output_path = os.path.join(output_dir, file_name)
         translate_and_convert_japanese(txt_file, output_path, white_list.get("1.0","end-1c").split('\n'), black_list_elements_list, max_chapter_len_var.get(), author, imgs_path)
 
@@ -367,9 +374,9 @@ download_options.grid(column=0, row=1, columnspan=2)
 ttk.Label(download_options, text="輸出目錄", font=lableFrame_font).grid(column=0, row=0, pady=10, padx=5)
 ttk.Entry(download_options, textvariable=output_dir_var, width=70, font=13).grid(column=1, row=0, columnspan=2,pady=10)
 ttk.Label(download_options, text="下載項目", font=lableFrame_font).grid(column=0, row=1, pady=10, padx=5)
-ttk.Entry(download_options, textvariable=output_name_var, width=70, font=13).grid(column=1, row=1, columnspan=2,pady=10)
+ttk.Entry(download_options, textvariable=output_name_var, width=70, font=13, state=tk.DISABLED).grid(column=1, row=1, columnspan=2,pady=10)
 ttk.Label(download_options, text="輸出檔名", font=lableFrame_font).grid(column=0, row=2, pady=10, padx=5)
-ttk.Entry(download_options, textvariable=output_name_var, width=70, font=13).grid(column=1, row=2, columnspan=2,pady=10)
+ttk.Entry(download_options, textvariable=output_japanese_name_var, width=70, font=13).grid(column=1, row=2, columnspan=2,pady=10)
 
 
 options = create_label_frame("選項", download_options)
@@ -577,8 +584,6 @@ def select_multi_files():
     # Auto convert
     if auto_convert_var.get() == True:
         convert2epub_multi()
-
-
 
 monty4 = ttk.LabelFrame(tab4)
 monty4.grid(column=0, row=0)
