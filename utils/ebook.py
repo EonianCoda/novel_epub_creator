@@ -1,6 +1,6 @@
 from ebooklib import epub
 import os
-
+import copy
 # Encoding
 Taiwan = "zh-TW"
 class Ebook(object):
@@ -163,7 +163,7 @@ def integrate_japanese_epubs(files:list, chapter_names:list, output_path:str):
     author = ""
     for book_idx, (file, name) in enumerate(zip(files, chapter_names)):
         book = epub.read_epub(file)
-        if author != "":
+        if author == "":
             author = book.get_metadata('DC','creator')[0][0]
         items = []
         toc = []
@@ -174,7 +174,7 @@ def integrate_japanese_epubs(files:list, chapter_names:list, output_path:str):
                 item.id = f"{book_idx}_{item.id}" 
                 item.file_name = f"{book_idx}_{item.file_name}"
                 items.append(item)
-                if cover_img_content != None:
+                if cover_img_content == None:
                     cover_img_content = copy.deepcopy(item.content)
         num_imgs = len(items)
         for link in book.toc:

@@ -319,7 +319,7 @@ def download_and_convert_japanese_novel():
             imgs_path = ""
         # Get file_name(e.g 第一卷.txt、第三卷.txt), and then convert it to  novel_name + chapter_name
         file_name = os.path.basename(txt_file).replace('.txt','.epub')
-        file_names.append(file_name)
+        file_names.append(file_name.replace('.epub',''))
         file_name = output_japanese_name_var.get() + ' '+ file_name
         output_path = os.path.join(output_dir, file_name)
         file_paths.append(output_path)
@@ -340,6 +340,7 @@ def download_and_convert_japanese_novel():
         path = output_dir_var.get()
         if path == '':
             path = '.'
+        path = os.path.join(path, output_japanese_name_var.get())
         open_explorer(path)
 
 
@@ -485,7 +486,7 @@ def select_black_element(event):
     """確定選取黑名單元素
     """
     global BLACKED_ELEMENT_SELECTED_IDX
-    if len(black_list_elements_list) == 0:
+    if len(black_list_elements_list) == 0 or len(black_list_listbox.curselection()) == 0:
         return
     BLACKED_ELEMENT_SELECTED_IDX = black_list_listbox.curselection()[0]
     black_list_delete_btn['state'] = 'normal' # Enable convert button
