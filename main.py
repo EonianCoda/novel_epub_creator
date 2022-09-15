@@ -7,6 +7,7 @@ from utils.convert import simple2Trad, translate_and_convert, translate_and_conv
 from utils.download import Downloader, Japanese_downloader
 from utils.config import FINDS, JAPANESE_SOURCE_NAME, MAX_CHAPTER_NAME_LEN, TMP_DIRECTORY, TMP_RAR_PATH, TMP_TXT_PATH, SOURCE_NAME
 from utils.config import reset_TMP_DIRECTORY, delete_if_exist, is_compressed_file, Setting
+from utils.ebook import integrate_japanese_epubs
 from utils.tkinter import clear_text_var, open_explorer, create_label_frame
 import os 
 import glob
@@ -306,8 +307,10 @@ def download_and_convert_japanese_novel():
         author = ""
     books = os.listdir(TMP_DIRECTORY)
     threads = []
-    for book in books:
-        path = os.path.join(TMP_DIRECTORY, book)
+    file_names = []
+    file_paths = []
+    for book_idx in range(len(books)):
+        path = os.path.join(TMP_DIRECTORY, str(book_idx))
         files = glob.glob(os.path.join(path,'*.txt'))
         txt_file = files[0]
         # This book has images
@@ -316,14 +319,20 @@ def download_and_convert_japanese_novel():
             imgs_path = ""
         # Get file_name(e.g 第一卷.txt、第三卷.txt), and then convert it to  novel_name + chapter_name
         file_name = os.path.basename(txt_file).replace('.txt','.epub')
+        file_names.append(file_name)
         file_name = output_japanese_name_var.get() + ' '+ file_name
         output_path = os.path.join(output_dir, file_name)
+        file_paths.append(output_path)
         translate_and_convert_japanese(txt_file, output_path, white_list.get("1.0","end-1c").split('\n'), black_list_elements_list, max_chapter_len_var.get(), author, imgs_path)
 
     for t in threads:
         t.start() 
     for t in threads:
         t.join()
+
+
+    output_path = os.path.join(output_dir, f"{output_japanese_name_var.get()}(全).epub")
+    integrate_japanese_epubs(file_paths, file_names, output_path)
     showinfo(title="訊息",message="轉換成功")
     
     # Open explorer
@@ -383,7 +392,7 @@ options = create_label_frame("選項", download_options)
 options.grid(column=0, row=3, columnspan=3, pady=8)
 ttk.Checkbutton(options, text="完成後開啟目錄",variable=open_explorer_var, style="normal.TCheckbutton").grid(column=0, row=0)
 ttk.Checkbutton(options, text="只有一結果時直接下載",variable=auto_download_japanese_var, style="normal.TCheckbutton").grid(column=1, row=0)
-ttk.Checkbutton(options, text="整合全卷",variable=auto_convert_var, style="normal.TCheckbutton").grid(column=2, row=0)
+#ttk.Checkbutton(options, text="整合全卷",variable=auto_convert_var, style="normal.TCheckbutton").grid(column=2, row=0)
 
 
 download_and_convert_japanese_btn = ttk.Button(download_options, text="下載並轉換", command=download_and_convert_japanese_novel, state="disable", style="normal.TButton", width=12)

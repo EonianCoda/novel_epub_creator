@@ -145,3 +145,92 @@ class Ebook(object):
             output_path += '.epub'
 
         epub.write_epub(output_path, self.book)
+
+def integrate_japanese_epubs(files:list, chapter_names:list, output_path:str):
+    """
+    Args:
+        files: list of the path of the file
+        chapter_names: the names of the chapters
+        output_path: the path of output file
+    """
+    ebook = epub.EpubBook()
+    ebook.set_language(Taiwan)
+    ebook.toc = []
+    all_items = []
+
+
+    cover_img_content = None
+    author = ""
+    for book_idx, (file, name) in enumerate(zip(files, chapter_names)):
+        book = epub.read_epub(file)
+        if author != "":
+            author = book.get_metadata('DC','creator')[0][0]
+        items = []
+        toc = []
+        spine = []
+        # add images
+        for item in book.items:
+            if isinstance(item, epub.EpubImage):
+                item.id = f"{book_idx}_{item.id}" 
+                item.file_name = f"{book_idx}_{item.file_name}"
+                items.append(item)
+                if cover_img_content != None:
+                    cover_img_content = copy.deepcopy(item.content)
+        num_imgs = len(items)
+        for link in book.toc:
+            uid = link.uid
+            if uid == 'imgs':
+                img_template = '<img src="{}"><br><br>'
+                item = epub.EpubHtml(title='彩頁', file_name=f'{book_idx}_imgs.xhtml', lang=Taiwan)
+                item.id = f"{book_idx}_imgs"
+                content = f'<h1>彩頁' + r'</h>'
+                for i in range(num_imgs):
+                    content += img_template.format(f"{book_idx}_{i}.jpg")
+                item.set_content(content)
+                items.append(item)
+                toc.append(epub.Link(item.file_name, '彩頁', item.id))
+                spine.append(item.id)
+            elif uid.isnumeric():
+                item = book.get_item_with_id(f"chapter_{uid}")
+                item.id = f"{book_idx}_{item.id}" 
+                item.file_name = f"{book_idx}_{item.file_name}"
+                items.append(item)
+
+                if link.title == None or link.title.strip() == "":
+                    toc.append(epub.Link(item.file_name, name, item.id))
+                else:
+                    toc.append(epub.Link(item.file_name, link.title, item.id))
+                spine.append(item.id)
+        
+        all_items += items
+        ebook.spine += spine
+        ebook.toc.append((epub.Section(name, href=f"{book_idx}_0.xhtml"), tuple(toc)))
+
+    for item in all_items:
+        ebook.add_item(item)
+    # Set spine and toc
+    ebook.spine = ['nav'] + ebook.spine
+    ebook.toc = [epub.Link("nav.xhtml","目錄",'nav')] + ebook.toc
+
+    # Set Cover
+    if cover_img_content != None:
+        ebook.set_cover("cover.jpg", content=cover_img_content, create_page=False)
+
+    if author == "":
+        author = "Novel Epub Creator Robot"
+    ebook.add_author(author)
+    # Set title
+    file_name = os.path.basename(output_path)
+    title = file_name.replace('.epub','')
+    ebook.set_title(title)
+    # Set identifier
+    ebook.set_identifier(title + ' ' + author)
+
+    # define CSS style
+    style = 'BODY {color: white;}' 
+    nav_css = epub.EpubItem(uid= "style_nav" , file_name= "style/nav.css" , media_type= "text/css" , content=style)
+    ebook.add_item(nav_css)
+    # Add navigation
+    ebook.add_item(epub.EpubNcx())
+    ebook.add_item(epub.EpubNav())
+    epub.write_epub(output_path, ebook)
