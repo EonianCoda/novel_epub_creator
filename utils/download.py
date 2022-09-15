@@ -670,7 +670,7 @@ class Wenku8_downloader(object):
         reset_TMP_DIRECTORY()
         for i, f in enumerate(files):
             chapter_name = simple2Trad(f.find('td').text)
-            file_name =  f"{novel_name} {chapter_name}.txt"
+            file_name =  f"{chapter_name}.txt"
             url =  f.find_all('a')[2].get('href')
 
             # Create directory for this chapter

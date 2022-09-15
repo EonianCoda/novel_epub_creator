@@ -291,6 +291,9 @@ def download_and_convert_japanese_novel():
     output_dir = output_dir_var.get()
     if output_dir == "":
         output_dir = ".\\output"
+    output_dir = os.path.join(output_dir, output_name_var.get())
+    os.makedirs(output_dir, exist_ok=True)
+    # Get author
     author = NOVEL_METADATA[SELECTED_IDX]['author']
     if author == None:
         author = ""
@@ -304,8 +307,9 @@ def download_and_convert_japanese_novel():
         imgs_path = os.path.join(path, 'imgs')
         if not os.path.exists(imgs_path):
             imgs_path = ""
-
+        # Get file_name(e.g 第一卷.txt、第三卷.txt), and then convert it to  novel_name + chapter_name
         file_name = os.path.basename(txt_file).replace('.txt','.epub')
+        file_name = output_name_var.get() + ' '+ file_name
         output_path = os.path.join(output_dir, file_name)
         translate_and_convert_japanese(txt_file, output_path, white_list.get("1.0","end-1c").split('\n'), black_list_elements_list, max_chapter_len_var.get(), author, imgs_path)
 
@@ -364,16 +368,19 @@ ttk.Label(download_options, text="輸出目錄", font=lableFrame_font).grid(colu
 ttk.Entry(download_options, textvariable=output_dir_var, width=70, font=13).grid(column=1, row=0, columnspan=2,pady=10)
 ttk.Label(download_options, text="下載項目", font=lableFrame_font).grid(column=0, row=1, pady=10, padx=5)
 ttk.Entry(download_options, textvariable=output_name_var, width=70, font=13).grid(column=1, row=1, columnspan=2,pady=10)
+ttk.Label(download_options, text="輸出檔名", font=lableFrame_font).grid(column=0, row=2, pady=10, padx=5)
+ttk.Entry(download_options, textvariable=output_name_var, width=70, font=13).grid(column=1, row=2, columnspan=2,pady=10)
+
 
 options = create_label_frame("選項", download_options)
-options.grid(column=0, row=2, columnspan=3, pady=8)
+options.grid(column=0, row=3, columnspan=3, pady=8)
 ttk.Checkbutton(options, text="完成後開啟目錄",variable=open_explorer_var, style="normal.TCheckbutton").grid(column=0, row=0)
 ttk.Checkbutton(options, text="只有一結果時直接下載",variable=auto_download_japanese_var, style="normal.TCheckbutton").grid(column=1, row=0)
 ttk.Checkbutton(options, text="整合全卷",variable=auto_convert_var, style="normal.TCheckbutton").grid(column=2, row=0)
 
 
 download_and_convert_japanese_btn = ttk.Button(download_options, text="下載並轉換", command=download_and_convert_japanese_novel, state="disable", style="normal.TButton", width=12)
-download_and_convert_japanese_btn.grid(column=0, row=3, columnspan=3, pady=10)
+download_and_convert_japanese_btn.grid(column=0, row=4, columnspan=3, pady=10)
 
 
 ### Tab1: Convert epub ###
