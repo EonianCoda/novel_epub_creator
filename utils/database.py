@@ -14,6 +14,14 @@ class Database(object):
         # init database directory
         os.makedirs(DATABASE_DIRECTORY, exist_ok=True)
 
+
+        if not is_japanese:
+            self.search_result_json = SEARCH_RESULTS_JSON
+            self.download_results_json = DOWNLOAD_RESULTS_JSON
+        else:
+            self.search_result_json = SEARCH_JAPANESE_RESULTS_JSON
+            self.download_results_json = DOWNLOAD_JAPANESE_RESULTS_JSON
+
         # Check database version
         if exists(DATABASE_VERSION):
             with open(DATABASE_VERSION, 'r', encoding='utf-8') as f:
@@ -30,12 +38,7 @@ class Database(object):
             with open(DATABASE_VERSION, 'w', encoding='utf-8') as f:
                 f.write(f'{cur_version}')
 
-        if not is_japanese:
-            self.search_result_json = SEARCH_RESULTS_JSON
-            self.download_results_json = DOWNLOAD_RESULTS_JSON
-        else:
-            self.search_result_json = SEARCH_JAPANESE_RESULTS_JSON
-            self.download_results_json = DOWNLOAD_JAPANESE_RESULTS_JSON
+
 
         if exists(self.search_result_json):
             with open(self.search_result_json, 'r', encoding='utf-8') as f:
