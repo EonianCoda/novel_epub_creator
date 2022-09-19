@@ -1,4 +1,3 @@
-import imp
 import tkinter as tk
 from tkinter import ttk, StringVar
 from tkinter import filedialog as fd
@@ -310,6 +309,9 @@ def download_and_convert_japanese_novel():
     threads = []
     file_names = []
     file_paths = []
+    
+    
+    book_chapters = JAPANESE_DOWNLOADER.get_book_titles(NOVEL_METADATA[SELECTED_IDX])
     for book_idx in range(len(books)):
         path = os.path.join(TMP_DIRECTORY, str(book_idx))
         files = glob.glob(os.path.join(path,'*.txt'))
@@ -324,7 +326,12 @@ def download_and_convert_japanese_novel():
         file_name = output_japanese_name_var.get() + ' '+ file_name
         output_path = os.path.join(output_dir, file_name)
         file_paths.append(output_path)
-        translate_and_convert_japanese(txt_file, output_path, white_list.get("1.0","end-1c").split('\n'), black_list_elements_list, max_chapter_len_var.get(), author, imgs_path)
+
+        # set white list 
+        cur_white_list = book_chapters[book_idx]
+        print(cur_white_list)
+        translate_and_convert_japanese(txt_file, output_path, cur_white_list, black_list_elements_list, max_chapter_len_var.get(), author, imgs_path)
+        # translate_and_convert_japanese(txt_file, output_path, white_list.get("1.0","end-1c").split('\n'), black_list_elements_list, max_chapter_len_var.get(), author, imgs_path)
 
     for t in threads:
         t.start() 

@@ -1,3 +1,4 @@
+from re import S
 import urllib
 from urllib.request import urlopen, Request
 from urllib.parse import quote
@@ -9,7 +10,7 @@ import glob
 import patoolib
 from fake_useragent import UserAgent
 from bs4 import BeautifulSoup
-
+from collections import defaultdict
 
 from utils.database import Database 
 from utils.config import TMP_DIRECTORY, TMP_TXT_PATH, TMP_RAR_PATH, TMP_ZIP_PATH, USE_DATABASE, reset_TMP_DIRECTORY
@@ -214,7 +215,11 @@ class Japanese_downloader(object):
             return 0
         else:
             return 2
-
+    def get_book_titles(self, metadata:dict):
+        source_idx = metadata['source_idx']
+        self.downloader[source_idx].read_book_main_page(metadata)
+        return self.downloader[source_idx].cur_book_titles
+        
 
 class Zxcs_downloader(object):
     """Download novel from websit: http://zxcs.me/ (知軒藏書)
@@ -532,10 +537,15 @@ class Wenku8_downloader(object):
         self.search_url = lambda key, p : self.base_url.format(quote(Trad2simple(key).encode('gbk')), p)
         self.latex_book_url = "https://www.wenku8.net/modules/article/toplist.php?sort=lastupdate"
         self._load_cookie()
-
+        # Current target novel html(temp) 
+        self.cur_book_titles = None
+        self.cur_book_imgurls = None
+        self.cur_book_indexurl = None
+        self.cur_metadata = None
+        self.cur_big_chapters = None
     @staticmethod
     def _dump_cookie():
-        cookie = "Input your cookie"
+        cookie = "Input your cookie................................"
         temp = cookie.split('\n')[1:-1]
         cookies = []
         for c in temp:
@@ -632,7 +642,10 @@ class Wenku8_downloader(object):
         num_pages = soup.find("div", id="pagelink").find_all('a')[-1].text
         
         return novels_metadata, int(num_pages)
+
     def search(self, key_word:str):
+        """Search novel with keyword
+        """
         result = self.search_page(key_word, page=1)
         if result == None:
             return None
@@ -697,40 +710,84 @@ class Wenku8_downloader(object):
         os.makedirs(img_path, exist_ok = True)
         for i, img in enumerate(imgs):
             self.download_file(img, f"{i}.jpg", img_path)
-            #time.sleep(0.1)
         return len(imgs)
+    # def get_cur_target_soups(self, metadata:dict):
+    #     # open new target
+    #     if self.cur_metadata == None or self.cur_metadata != metadata:
+    #         novel_idx = metadata['novel_idx']
+    #         url = "https://www.wenku8.net/book/{}.htm".format(novel_idx)
+    #         soup = self.open_url(url, use_cookie=False)
+    #         index_url = soup.find('div',id="content").find_all("a")[4].get('href')
+    #         soup = self.open_url(index_url, use_cookie=False)
+    #         # Set new current metadata and soup
+    #         self.cur_metadata = metadata
+    #         self.cur_soup = soup
+    #     return self.cur_soup
+
+    def read_book_main_page(self, metadata:dict):
+        """
+        If current metadata not equal input metadata, then read it
+        """
+        if self.cur_metadata != metadata:
+            self.cur_book_titles = defaultdict(list)
+            self.cur_book_imgurls = defaultdict(str)
+
+            novel_idx = metadata['novel_idx']
+            # get main page url
+            url = "https://www.wenku8.net/book/{}.htm".format(novel_idx)
+            soup = self.open_url(url, use_cookie=False)
+
+            # Set current book url
+            self.cur_book_indexurl = soup.find('div',id="content").find_all("a")[4].get('href')
+            soup = self.open_url(self.cur_book_indexurl, use_cookie=False)
+            # get big titles
+            # e.g 第一卷, 第二卷
+            big_titles = soup.find('table').find_all('td',class_="vcss")
+            self.cur_big_chapters = [c.text for c in big_titles]
+            # get all titles(contains big title)
+            all_titles = soup.find('table').find_all('td')
+
+            cur_idx = 0
+            for t in all_titles:
+                if cur_idx < len(self.cur_big_chapters) and t.text == self.cur_big_chapters[cur_idx]:
+                    cur_idx += 1
+                    continue
+                # add img page url
+                if t.text == "插圖" or t.text == "插图":
+                    self.cur_book_imgurls[cur_idx] = t.find('a').get('href')
+                else:
+                    self.cur_book_titles[cur_idx].append(t.text)
         
     def download_imgs(self, metadata:dict):
-        novel_name, novel_idx = metadata['novel_name'], metadata['novel_idx']
-        url = "https://www.wenku8.net/book/{}.htm".format(novel_idx)
-        soup = self.open_url(url, use_cookie=False)
+        self.read_book_main_page(metadata)
+        #novel_idx = metadata['novel_idx']
+        # url = "https://www.wenku8.net/book/{}.htm".format(novel_idx)
+        # soup = self.open_url(url, use_cookie=False)
 
-        index_url = soup.find('div',id="content").find_all("a")[4].get('href')
-        soup = self.open_url(index_url, use_cookie=False)
-        chapter_titles = soup.find('table').find_all('td',class_="vcss")
-        chapter_titles = [c.text for c in chapter_titles]
-        num_chapters = len(chapter_titles)
+        # index_url = soup.find('div',id="content").find_all("a")[4].get('href')
+        # soup = self.open_url(index_url, use_cookie=False)
 
-        from collections import defaultdict
-        all_titles = soup.find('table').find_all('td')
-        idx = 0
-        img_urls = defaultdict(list)
-        for t in all_titles:
-            if idx < len(chapter_titles) and t.text == chapter_titles[idx]:
-                idx += 1
-            if t.text == "插圖" or t.text == "插图":
-                img_urls[idx - 1].append(t.find('a').get('href'))
+        # book_chapters = self.get_book_chapters(metadata)
+        # num_chapters = len(book_chapters)
+        # idx = 0
+        # img_urls = defaultdict(list)
+        # for t in all_titles:
+        #     if idx < len(chapter_titles) and t.text == chapter_titles[idx]:
+        #         idx += 1
+        #     if t.text == "插圖" or t.text == "插图":
+        #         img_urls[idx - 1].append(t.find('a').get('href'))
 
-        base_url = '/'.join(index_url.split('/')[:-1]) 
+        base_url = '/'.join(self.cur_book_indexurl.split('/')[:-1]) 
         base_url += '/'
 
+        num_chapters = len(self.cur_big_chapters)
         threading.Semaphore(3)
         threads = []
         for chapter_idx in range(num_chapters):
-            if len(img_urls[chapter_idx]) == 0:
+            if self.cur_book_imgurls[chapter_idx] == '':
                 continue
             # Download img one by one
-            url = base_url + img_urls[chapter_idx][0]
+            url = base_url + self.cur_book_imgurls[chapter_idx][0]
             t = threading.Thread(target=self.download_img, args=(url, chapter_idx))
             threads.append(t)
 
