@@ -37,7 +37,7 @@ win.resizable(False, False)
 # Revise window size depending the size of the screen 
 base_screen_w = 1920
 base_screen_h = 1080
-base_win_w = 800
+base_win_w = 900
 base_win_h = 900
 screen_w = win.winfo_screenwidth()
 screen_h = win.winfo_screenheight()
@@ -67,7 +67,7 @@ input_dir.set(setting['input_dir'])
 max_chapter_len_var = tk.IntVar()
 max_chapter_len_var.set(MAX_CHAPTER_NAME_LEN)
 # Options
-open_explorer_var =  tk.BooleanVar()
+open_explorer_var =  tk.BooleanVar(value=True)
 auto_extract_var = tk.BooleanVar()
 auto_extract_var.set(True)
 auto_convert_var = tk.BooleanVar()
@@ -311,7 +311,7 @@ def download_and_convert_japanese_novel():
     file_paths = []
     
     
-    book_chapters = JAPANESE_DOWNLOADER.get_book_titles(NOVEL_METADATA[SELECTED_IDX])
+    big_chapters, book_chapters = JAPANESE_DOWNLOADER.get_book_titles(NOVEL_METADATA[SELECTED_IDX])
     for book_idx in range(len(books)):
         path = os.path.join(TMP_DIRECTORY, str(book_idx))
         files = glob.glob(os.path.join(path,'*.txt'))
@@ -329,12 +329,28 @@ def download_and_convert_japanese_novel():
 
         # set white list 
         cur_white_list = book_chapters[book_idx]
-        print(cur_white_list)
-        translate_and_convert_japanese(txt_file, output_path, cur_white_list, black_list_elements_list, max_chapter_len_var.get(), author, imgs_path)
+        if len(cur_white_list) == 0:
+            cur_white_list = white_list.get("1.0","end-1c").split('\n')
+            translate_and_convert_japanese(input_path=txt_file,
+                                            output_path=output_path,
+                                            white_list=cur_white_list,
+                                            black_list=black_list_elements_list,
+                                            max_chapter_name_len=max_chapter_len_var.get(),
+                                            author=author,
+                                            imgs_path=imgs_path)
+        else:
+            cur_white_list = [f'{big_chapters[book_idx]} {s}'for s in cur_white_list]
+            translate_and_convert_japanese(input_path=txt_file,
+                                        output_path=output_path,
+                                        ordered_white_list=cur_white_list,
+                                        black_list=black_list_elements_list,
+                                        max_chapter_name_len=max_chapter_len_var.get(),
+                                        author=author,
+                                        imgs_path=imgs_path)
         # translate_and_convert_japanese(txt_file, output_path, white_list.get("1.0","end-1c").split('\n'), black_list_elements_list, max_chapter_len_var.get(), author, imgs_path)
 
     for t in threads:
-        t.start() 
+        t.start()
     for t in threads:
         t.join()
 
@@ -366,47 +382,6 @@ tabControl.add(tab4, text="批量轉換")
 tab5 = ttk.Frame(tabControl)
 tabControl.add(tab5, text="日輕下載")
 tabControl.pack(expand=1,fill="both")
-
-
-### Tab5: Download japenese novel ###
-monty5 = ttk.LabelFrame(tab5)
-monty5.grid(column=0, row=0)
-
-search_frame = create_label_frame("搜尋", monty5)
-search_frame.grid(column=0, row=0, columnspan=2)
-ttk.Entry(search_frame, textvariable=search_var, width=70, font=12).grid(column=0, row=0, padx=10)
-ttk.Button(search_frame, text="搜尋", command=search_japanese_novel, style="normal.TButton", width=12).grid(column=1, row=0)
-
-search_result_frame = create_label_frame("搜尋結果", search_frame)
-search_result_frame.grid(column=0, row=1, columnspan=2)
-
-
-# Novel List box
-japanese_novel_listbox = tk.Listbox(search_result_frame, listvariable=selected_japanese_novel_var, font=10, selectbackground="blue", selectmode="single", width=80)
-japanese_novel_listbox.bind("<<ListboxSelect>>", select_japanese_novel)
-japanese_novel_listbox.grid(column=0, row=1)
-
-
-download_options = create_label_frame("", monty5)
-download_options.grid(column=0, row=1, columnspan=2)
-ttk.Label(download_options, text="輸出目錄", font=lableFrame_font).grid(column=0, row=0, pady=10, padx=5)
-ttk.Entry(download_options, textvariable=output_dir_var, width=70, font=13).grid(column=1, row=0, columnspan=2,pady=10)
-ttk.Label(download_options, text="下載項目", font=lableFrame_font).grid(column=0, row=1, pady=10, padx=5)
-ttk.Entry(download_options, textvariable=output_name_var, width=70, font=13, state=tk.DISABLED).grid(column=1, row=1, columnspan=2,pady=10)
-ttk.Label(download_options, text="輸出檔名", font=lableFrame_font).grid(column=0, row=2, pady=10, padx=5)
-ttk.Entry(download_options, textvariable=output_japanese_name_var, width=70, font=13).grid(column=1, row=2, columnspan=2,pady=10)
-
-
-options = create_label_frame("選項", download_options)
-options.grid(column=0, row=3, columnspan=3, pady=8)
-ttk.Checkbutton(options, text="完成後開啟目錄",variable=open_explorer_var, style="normal.TCheckbutton").grid(column=0, row=0)
-ttk.Checkbutton(options, text="只有一結果時直接下載",variable=auto_download_japanese_var, style="normal.TCheckbutton").grid(column=1, row=0)
-#ttk.Checkbutton(options, text="整合全卷",variable=auto_convert_var, style="normal.TCheckbutton").grid(column=2, row=0)
-
-
-download_and_convert_japanese_btn = ttk.Button(download_options, text="下載並轉換", command=download_and_convert_japanese_novel, state="disable", style="normal.TButton", width=12)
-download_and_convert_japanese_btn.grid(column=0, row=4, columnspan=3, pady=10)
-
 
 ### Tab1: Convert epub ###
 monty1 = ttk.LabelFrame(tab1)
@@ -636,6 +611,45 @@ chapter_preview_frame = create_label_frame("章節預覽", monty4)
 chapter_preview_frame.grid(column=0, row=6, columnspan=2)
 multi_chapter_preview = ScrolledText(chapter_preview_frame, font=5,wrap=tk.WORD, height=13)
 multi_chapter_preview.grid(column=0, row=0, columnspan=2, ipady=5)
+
+### Tab5: Download japenese novel ###
+monty5 = ttk.LabelFrame(tab5)
+monty5.grid(column=0, row=0)
+
+search_frame = create_label_frame("搜尋", monty5)
+search_frame.grid(column=0, row=0, columnspan=2)
+ttk.Entry(search_frame, textvariable=search_var, width=70, font=12).grid(column=0, row=0, padx=10)
+ttk.Button(search_frame, text="搜尋", command=search_japanese_novel, style="normal.TButton", width=12).grid(column=1, row=0)
+
+search_result_frame = create_label_frame("搜尋結果", search_frame)
+search_result_frame.grid(column=0, row=1, columnspan=2)
+
+
+# Novel List box
+japanese_novel_listbox = tk.Listbox(search_result_frame, listvariable=selected_japanese_novel_var, font=10, selectbackground="blue", selectmode="single", width=80)
+japanese_novel_listbox.bind("<<ListboxSelect>>", select_japanese_novel)
+japanese_novel_listbox.grid(column=0, row=1)
+
+
+download_options = create_label_frame("", monty5)
+download_options.grid(column=0, row=1, columnspan=2)
+ttk.Label(download_options, text="輸出目錄", font=lableFrame_font).grid(column=0, row=0, pady=10, padx=5)
+ttk.Entry(download_options, textvariable=output_dir_var, width=70, font=13).grid(column=1, row=0, columnspan=2,pady=10)
+ttk.Label(download_options, text="下載項目", font=lableFrame_font).grid(column=0, row=1, pady=10, padx=5)
+ttk.Entry(download_options, textvariable=output_name_var, width=70, font=13, state=tk.DISABLED).grid(column=1, row=1, columnspan=2,pady=10)
+ttk.Label(download_options, text="輸出檔名", font=lableFrame_font).grid(column=0, row=2, pady=10, padx=5)
+ttk.Entry(download_options, textvariable=output_japanese_name_var, width=70, font=13).grid(column=1, row=2, columnspan=2,pady=10)
+
+
+options = create_label_frame("選項", download_options)
+options.grid(column=0, row=3, columnspan=3, pady=8)
+ttk.Checkbutton(options, text="完成後開啟目錄",variable=open_explorer_var, style="normal.TCheckbutton").grid(column=0, row=0)
+#ttk.Checkbutton(options, text="只有一結果時直接下載",variable=auto_download_japanese_var, style="normal.TCheckbutton").grid(column=1, row=0)
+#ttk.Checkbutton(options, text="整合全卷",variable=auto_convert_var, style="normal.TCheckbutton").grid(column=2, row=0)
+
+
+download_and_convert_japanese_btn = ttk.Button(download_options, text="下載並轉換", command=download_and_convert_japanese_novel, state="disable", style="normal.TButton", width=12)
+download_and_convert_japanese_btn.grid(column=0, row=4, columnspan=3, pady=10)
 
 if __name__ == "__main__":
     win.mainloop()
