@@ -12,6 +12,7 @@ from utils.tkinter import clear_text_var, open_explorer, create_label_frame
 import os 
 import glob
 import patoolib
+import webbrowser
 from utils.google_drive import upload
 ### Error Message ###
 ERROR_MESSAGE = {'read_error':lambda : showinfo(title="錯誤",message="無法解析此檔案編碼"),
@@ -76,6 +77,7 @@ auto_convert_var.set(False)
 ## For tab2(Search China novel)
 search_var = StringVar()
 selected_novel_var = tk.StringVar()
+gdrive_link_var = tk.StringVar()
 
 ## For tab3(Setting)
 new_black_list_element = tk.StringVar()
@@ -93,6 +95,17 @@ auto_download_japanese_var = tk.BooleanVar()
 auto_download_japanese_var.set(False)
 output_japanese_name_var = tk.StringVar()
 
+
+
+def open_gdrive_link():
+    if gdrive_link_var.get() != "":
+        webbrowser.open_new(gdrive_link_var.get())
+
+def copy_gdrive_link():
+    if gdrive_link_var.get() != "":
+        win.clipboard_clear()
+        win.clipboard_append(gdrive_link_var.get())
+        showinfo(title="訊息",message="複製成功!")
 def get_output_path():
     output_dir = output_dir_var.get()
     if output_dir == "":
@@ -444,6 +457,19 @@ ttk.Checkbutton(download_options, text="完成後開啟目錄",variable=open_exp
 download_and_convert_btn = ttk.Button(download_options, text="下載並轉換", command=download_and_convert_novel, state="disable", style="normal.TButton", width=12)
 download_and_convert_btn.grid(column=0, row=3, columnspan=3, pady=10)
 
+# google drive link block
+gdrive_frame = create_label_frame("檔案雲端連結", monty2)
+gdrive_frame.grid(column=0, row=3, columnspan=2)
+
+gdrive_link_show = ttk.Entry(gdrive_frame, textvariable=gdrive_link_var, width=70, font=13, state="disable")
+gdrive_link_show.grid(column=0, row=0, columnspan=2,pady=10)
+
+open_browser_chinese = ttk.Button(gdrive_frame, text="開啟瀏覽器", command=open_gdrive_link, style="normal.TButton", width=12, state="disable")
+open_browser_chinese.grid(column=0, row=1, columnspan=1, pady=10)
+copy_link_chinese = ttk.Button(gdrive_frame, text="複製到剪貼簿", command=copy_gdrive_link, style="normal.TButton", width=12, state="disable")
+copy_link_chinese.grid(column=1, row=1, columnspan=1, pady=10)
+
+
 ### Tab3: Convert epub ###
 def reset_white_list():
     clear_text_var(white_list)
@@ -650,6 +676,18 @@ ttk.Checkbutton(options, text="完成後開啟目錄",variable=open_explorer_var
 
 download_and_convert_japanese_btn = ttk.Button(download_options, text="下載並轉換", command=download_and_convert_japanese_novel, state="disable", style="normal.TButton", width=12)
 download_and_convert_japanese_btn.grid(column=0, row=4, columnspan=3, pady=10)
+
+# google drive link block
+gdrive_frame = create_label_frame("檔案雲端連結", monty5)
+gdrive_frame.grid(column=0, row=5, columnspan=2)
+
+gdrive_link_show = ttk.Entry(gdrive_frame, textvariable=gdrive_link_var, width=70, font=13, state="disable")
+gdrive_link_show.grid(column=0, row=0, columnspan=2,pady=10)
+
+open_browser_japanese = ttk.Button(gdrive_frame, text="開啟瀏覽器", command=open_gdrive_link, style="normal.TButton", width=12, state="disable")
+open_browser_japanese.grid(column=0, row=1, columnspan=1, pady=10)
+copy_link_japanese = ttk.Button(gdrive_frame, text="複製到剪貼簿", command=copy_gdrive_link, style="normal.TButton", width=12, state="disable")
+copy_link_japanese.grid(column=1, row=1, columnspan=1, pady=10)
 
 if __name__ == "__main__":
     win.mainloop()

@@ -1,8 +1,8 @@
 from __future__ import print_function
 
-import os.path
+import os
 
-# from utils.config import get_OUTPUT_PATH, GOOGLE_DRIVE_PATH
+from utils.config import Setting, GOOGLE_DRIVE_PATH
 
 from google.auth.transport.requests import Request
 from google.oauth2.credentials import Credentials
@@ -13,14 +13,16 @@ from googleapiclient.http import MediaFileUpload, MediaIoBaseDownload
 
 from utils.database import Database
 
-
 # If modifying these scopes, delete the file token.json.
 SCOPES = ['https://www.googleapis.com/auth/drive']
+SETTING = Setting()
+
+
 def search_folder(service, update_drive_folder_name=None):
     """
     如果雲端資料夾名稱相同，則只會選擇一個資料夾上傳，請勿取名相同名稱
     :param service: 認證用
-    :param update_drive_folder_name: 取得指定資料夾的id，沒有的話回傳None，給錯也會回傳None
+    :param update_drive_folder_name: 取得指定資料夾的id, 沒有的話回傳None, 給錯也會回傳None
     """
 
     get_folder_id_list = []
@@ -96,7 +98,7 @@ def file_exist(items,filename):
         return True
     else :
         return False 
-def upload(file,local_file_path):
+def upload(file, local_file_path):
     """
     建立service並將本地端的檔案傳到雲端上
     :file:(上傳的檔案名稱,資料來源)
@@ -135,5 +137,5 @@ def upload(file,local_file_path):
         print(f'An error occurred: {error}')
 if __name__ =='__main__':
     name = str(29295)
-    print(upload(filename=name+'.epub',local_file_path= get_OUTPUT_PATH(name)))
+    print(upload(filename=name+'.epub',local_file_path= SETTING.get_OUTPUT_PATH(name)))
 
