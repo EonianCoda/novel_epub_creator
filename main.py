@@ -1,3 +1,4 @@
+import imp
 import tkinter as tk
 from tkinter import ttk, StringVar
 from tkinter import filedialog as fd
@@ -5,14 +6,14 @@ from tkinter.messagebox import showinfo
 from tkinter.scrolledtext import ScrolledText
 from utils.convert import simple2Trad, translate_and_convert, translate_and_convert_japanese
 from utils.download import Downloader, Japanese_downloader
-from utils.config import FINDS, JAPANESE_SOURCE_NAME, MAX_CHAPTER_NAME_LEN, TMP_DIRECTORY, TMP_RAR_PATH, TMP_TXT_PATH, SOURCE_NAME
+from utils.config import FINDS, JAPANESE_SOURCE_NAME, MAX_CHAPTER_NAME_LEN, TMP_DIRECTORY, TMP_RAR_PATH, TMP_TXT_PATH, SOURCE_NAME,GOOGLE_DRIVE_PATH
 from utils.config import reset_TMP_DIRECTORY, delete_if_exist, is_compressed_file, Setting
 from utils.ebook import integrate_japanese_epubs
 from utils.tkinter import clear_text_var, open_explorer, create_label_frame
 import os 
 import glob
 import patoolib
-
+from utils.google_drive import upload
 ### Error Message ###
 ERROR_MESSAGE = {'read_error':lambda : showinfo(title="錯誤",message="無法解析此檔案編碼"),
                  'download_error':lambda : showinfo(title="錯誤",message="下載錯誤"),
