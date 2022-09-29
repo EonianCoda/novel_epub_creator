@@ -12,7 +12,6 @@ test.txt
 *.spec
 *.ipynb
 *.exe
-*.ui
 *.ini
 *.epub
 *.jpg
