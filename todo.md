@@ -13,7 +13,7 @@
   * discord bot: 若translate 失敗，應回傳錯誤訊息
   * 下載進度條
   * 顯示作者與簡介，方便使用者選到正確的小說
-  * google drive上傳(電腦版視窗)
+  * google drive上傳(電腦版視窗)image.png
   * 中國網路小說/輕小說 選擇
   * 搜尋google drive已有檔案
   * discord button
