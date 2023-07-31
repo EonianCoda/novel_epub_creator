@@ -13,7 +13,7 @@ import os
 import glob
 import patoolib
 import webbrowser
-from utils.google_drive import upload
+#from utils.google_drive import upload
 ### Error Message ###
 ERROR_MESSAGE = {'read_error':lambda : showinfo(title="錯誤",message="無法解析此檔案編碼"),
                  'download_error':lambda : showinfo(title="錯誤",message="下載錯誤"),

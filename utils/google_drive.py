@@ -12,12 +12,87 @@ from googleapiclient.errors import HttpError
 from googleapiclient.http import MediaFileUpload, MediaIoBaseDownload
 
 from utils.database import Database
-
-# If modifying these scopes, delete the file token.json.
+from pathlib import Path
+# WARNING: If modifying these scopes, delete the file token.json.
 SCOPES = ['https://www.googleapis.com/auth/drive']
+TOKEN_PATH = Path('./.keys/token.json')
+CRED_PATH = Path('./.keys/credentials.json')
 SETTING = Setting()
 
 
+
+class Gdrive_uploader(object):
+    def __init__(self):
+        self.cred = self._get_creds()
+    
+    @staticmethod
+    def _get_creds():
+        """Get credential via exising file:credentials.json and logging
+        """
+        if os.path.exists(CRED_PATH):
+            raise SystemError("Credentials file does not exist!")
+        # If token exists, then read it and create credential
+        if os.path.exists(TOKEN_PATH):
+            creds = Credentials.from_authorized_user_file(TOKEN_PATH, SCOPES)
+        # If there are no (valid) credentials available, let the user log in.
+        if not creds or not creds.valid:
+            if creds and creds.expired and creds.refresh_token:
+                creds.refresh(Request())
+            else:
+                flow = InstalledAppFlow.from_client_secrets_file(CRED_PATH, SCOPES)
+                creds = flow.run_local_server(port=0)
+            # Save the credentials for the next run
+            with open(TOKEN_PATH, 'w') as token:
+                token.write(creds.to_json())
+        return creds
+
+    
+    def _get_file_list(service):
+        results = service.files().list(pageSize=10, fields="nextPageToken, files(id, name)").execute()
+        items = results.get('files', [])
+        if not items:
+            print('No files found.')
+        return items
+
+    def upload(self, file, local_file_path):
+        """Upload file into gdrive
+        Args:
+            file: the file which is uploaded
+            local_file
+        建立service並將本地端的檔案傳到雲端上
+        :file:(上傳的檔案名稱,資料來源)
+        :local_file_path:檔案位置
+        """
+        database = Database()
+        filename,source_idx = file
+        try:
+            service = build('drive', 'v3', credentials=self.creds)
+            item_list=[]
+            items = get_file_list(service=service)
+            for item in items:
+                item_list.append(item['name'])
+            
+            get_folder_id = search_folder(service = service, update_drive_folder_name = 'Novel')
+            items = get_file_list(service=service)
+            if filename not in item_list:
+                file_name,file_id = update_file(service=service,update_drive_service_name=filename,local_file_path=local_file_path,update_drive_service_folder_id=get_folder_id)
+                path = GOOGLE_DRIVE_PATH.format(file_id)
+                key = str((filename,source_idx))
+                if database.get_download(key)== None:
+                    database.add_download(key,file_id)
+                return path
+            else :
+                # print('same')
+                file_id = items[item_list.index(filename)]['id']
+                key = str((filename,source_idx))
+                if database.get_download(key)== None:
+                    database.add_download(key,file_id)
+                path =GOOGLE_DRIVE_PATH.format(items[item_list.index(filename)]['id'])
+                return path
+        except HttpError as error:
+            # TODO(developer) - Handle errors from drive API.
+            print(f'An error occurred: {error}')
+    
 def search_folder(service, update_drive_folder_name=None):
     """
     如果雲端資料夾名稱相同，則只會選擇一個資料夾上傳，請勿取名相同名稱
@@ -66,30 +141,7 @@ def update_file(service, update_drive_service_name, local_file_path, update_driv
     print('雲端檔案ID為: ' + str(file_id['id']))
     print('檔案大小為: ' + str(file_metadata_size) + ' byte')
     return file_metadata['name'], file_id['id']
-def get_creds():
-    creds = None
-    token_path = './.keys/token.json'
-    cred_path = './.keys/credentials.json'
-    if os.path.exists(token_path):
-        creds = Credentials.from_authorized_user_file(token_path, SCOPES)
-    # If there are no (valid) credentials available, let the user log in.
-    if not creds or not creds.valid:
-        if creds and creds.expired and creds.refresh_token:
-            creds.refresh(Request())
-        else:
-            flow = InstalledAppFlow.from_client_secrets_file(
-                cred_path, SCOPES)
-            creds = flow.run_local_server(port=0)
-        # Save the credentials for the next run
-        with open(token_path, 'w') as token:
-            token.write(creds.to_json())
-    return creds
-def get_file_list(service):
-    results = service.files().list(pageSize=10, fields="nextPageToken, files(id, name)").execute()
-    items = results.get('files', [])
-    if not items:
-        print('No files found.')
-    return items
+
 def file_exist(items,filename):
     item_list=[]
     for item in items:
@@ -98,43 +150,6 @@ def file_exist(items,filename):
         return True
     else :
         return False 
-def upload(file, local_file_path):
-    """
-    建立service並將本地端的檔案傳到雲端上
-    :file:(上傳的檔案名稱,資料來源)
-    :local_file_path:檔案位置
-    """
-    creds = get_creds()
-    database = Database()
-    filename,source_idx = file
-    try:
-        service = build('drive', 'v3', credentials=creds)
-        item_list=[]
-        items = get_file_list(service=service)
-        for item in items:
-            item_list.append(item['name'])
-        
-        get_folder_id = search_folder(service = service, 
-                                        update_drive_folder_name = 'Novel')
-        items = get_file_list(service=service)
-        if filename not in item_list:
-            file_name,file_id = update_file(service=service,update_drive_service_name=filename,local_file_path=local_file_path,update_drive_service_folder_id=get_folder_id)
-            path = GOOGLE_DRIVE_PATH.format(file_id)
-            key = str((filename,source_idx))
-            if database.get_download(key)== None:
-                database.add_download(key,file_id)
-            return path
-        else :
-            # print('same')
-            file_id = items[item_list.index(filename)]['id']
-            key = str((filename,source_idx))
-            if database.get_download(key)== None:
-                database.add_download(key,file_id)
-            path =GOOGLE_DRIVE_PATH.format(items[item_list.index(filename)]['id'])
-            return path
-    except HttpError as error:
-        # TODO(developer) - Handle errors from drive API.
-        print(f'An error occurred: {error}')
 if __name__ =='__main__':
     name = str(29295)
     print(upload(filename=name+'.epub',local_file_path= SETTING.get_OUTPUT_PATH(name)))

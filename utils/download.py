@@ -102,12 +102,12 @@ def all_match(metadatas:list, keyword:str):
 
 class Downloader(object):
     def __init__(self, search_all_source=False, use_database=USE_DATABASE):
-        self.downloader = {'Zxcs': Zxcs_downloader(),     # 知軒藏書
-                            'Mijjxswco':Mijjxswco_downloader(),  # 久久小說下載網
+        self.downloader = { #'Zxcs': Zxcs_downloader(),     # 知軒藏書
+                            'Mijjxswco':Mijjxswco_downloader()}  # 久久小說下載網
                             # 'Ijjxs':Ijjxs_downloader(), # 愛久久小說下載網
                             # 'Qiuyewx':Qiuyewx_downloader(), # 平板电子书网
                             #'Qinkan':Qinkan_downloader(),  # 請看小說網
-                            'Xsla':Xsla_downloader(), }  # 八零电子书 (Too slow)
+                            # 'Xsla':Xsla_downloader(), }  # 八零电子书 (Too slow)
         self.search_all_source = search_all_source
         self.use_database = use_database
         if self.use_database:
