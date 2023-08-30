@@ -87,8 +87,8 @@ class Ebook_creater(object):
         content += "</p>"
         book.add_chapter(chapter_name, content)
 
-        if imgs_path != "":
-            book.set_cover( os.path.join(imgs_path, "0.jpg"))
+        if imgs_path != "" and os.path.exists(os.path.join(imgs_path, "0.jpg")):
+            book.set_cover(os.path.join(imgs_path, "0.jpg"))
             book.add_image_page(imgs_path, True)
 
         # Output book
@@ -154,14 +154,14 @@ def Trad2simple(content:str):
 def read_file(file_name:str):
     """Read file
     """
-    encodings = ['gbk','big5','utf-8','gb2312','gb18030','utf-16','utf-16-le','utf-16-be']
+    encodings = ['gbk','big5','utf-8','utf-16','gb2312','gb18030','utf-16-le','utf-16-be']
     flag = False
     for encoding in encodings:
         try:
             f = open(file_name, 'r', encoding=encoding)
             content = f.read()
             flag = True
-        except UnicodeDecodeError:
+        except (UnicodeDecodeError, UnicodeError):
             continue
         finally:
             f.close()
