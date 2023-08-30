@@ -161,7 +161,8 @@ def read_file(file_name:str):
             f = open(file_name, 'r', encoding=encoding)
             content = f.read()
             flag = True
-        except (UnicodeDecodeError, UnicodeError):
+            break
+        except (UnicodeDecodeError, UnicodeError) as e:
             continue
         finally:
             f.close()
