@@ -3,12 +3,17 @@ from tkinter import ttk, StringVar
 from tkinter import filedialog as fd
 from tkinter.messagebox import showinfo
 from tkinter.scrolledtext import ScrolledText
-from utils.convert import simple2Trad, translate_and_convert, translate_and_convert_japanese
+
+from colorama import init
+from utils.convert import simple2Trad, translate_and_convert, translate_and_convert_japanese, translate
 from utils.download import Downloader, Japanese_downloader
 from utils.config import FINDS, JAPANESE_SOURCE_NAME, MAX_CHAPTER_NAME_LEN, TMP_DIRECTORY, TMP_RAR_PATH, TMP_TXT_PATH, SOURCE_NAME,GOOGLE_DRIVE_PATH
 from utils.config import reset_TMP_DIRECTORY, delete_if_exist, is_compressed_file, Setting
 from utils.ebook import integrate_japanese_epubs
 from utils.tkinter import clear_text_var, open_explorer, create_label_frame
+
+from tk_component.reorderable_list_box import ReorderableListbox
+
 import os 
 import glob
 import patoolib
@@ -73,6 +78,8 @@ auto_extract_var = tk.BooleanVar()
 auto_extract_var.set(True)
 auto_convert_var = tk.BooleanVar()
 auto_convert_var.set(False)
+chapter_name_with_file_name_var = tk.BooleanVar()
+chapter_name_with_file_name_var.set(False)
 
 ## For tab2(Search China novel)
 search_var = StringVar()
@@ -94,8 +101,6 @@ selected_japanese_novel_var = tk.StringVar()
 auto_download_japanese_var = tk.BooleanVar()
 auto_download_japanese_var.set(False)
 output_japanese_name_var = tk.StringVar()
-
-
 
 def open_gdrive_link():
     if gdrive_link_var.get() != "":
@@ -380,8 +385,6 @@ def download_and_convert_japanese_novel():
         path = os.path.join(path, output_japanese_name_var.get())
         open_explorer(path)
 
-
-
 ### Control ###
 tabControl = ttk.Notebook(win)
 tab1 = ttk.Frame(tabControl)
@@ -394,6 +397,9 @@ tab4 = ttk.Frame(tabControl)
 tabControl.add(tab4, text="批量轉換")
 tab5 = ttk.Frame(tabControl)
 tabControl.add(tab5, text="日輕下載")
+tab6 = ttk.Frame(tabControl)
+tabControl.add(tab6, text="合併檔案")
+
 tabControl.pack(expand=1,fill="both")
 
 ### Tab1: Convert epub ###
@@ -437,12 +443,10 @@ ttk.Button(search_frame, text="搜尋", command=search_novel, style="normal.TBut
 search_result_frame = create_label_frame("搜尋結果", search_frame)
 search_result_frame.grid(column=0, row=1, columnspan=2)
 
-
 # Novel List box
 novel_listbox = tk.Listbox(search_result_frame, listvariable=selected_novel_var, font=10, selectbackground="blue", selectmode="single", width=80)
 novel_listbox.bind("<<ListboxSelect>>", select_novel)
 novel_listbox.grid(column=0, row=1)
-
 
 download_options = create_label_frame("", monty2)
 download_options.grid(column=0, row=1, columnspan=2)
@@ -537,7 +541,7 @@ black_list_listbox.bind("<<ListboxSelect>>", select_black_element)
 black_list_listbox.grid(column=0, row=2, rowspan=1,columnspan=3)
 #ttk.Button(monty3, text="儲存設定", command=select_files, style="normal.TButton", width=12).grid(column=0, row=4)
 
-### Tab4: Convert epub ###
+### Tab4: Convert multiple epubs ###
 
 def convert2epub_multi():
     global multi_file_paths
@@ -548,6 +552,7 @@ def convert2epub_multi():
     # get output names 
     multi_output_names = multi_output_name_block_text.get("1.0","end-1c").split('\n')
     preview_texts = ""
+    
     for in_f, out_f in zip(multi_file_paths, multi_output_names):
         output_path = os.path.join(output_dir, out_f)
         try:
@@ -572,8 +577,7 @@ def convert2epub_multi():
 def select_multi_files():
     global multi_file_paths
     filetypes = [('Accepted files', '*.txt'),
-                ('text files', '*.txt'),
-]
+                ('text files', '*.txt'),]
     file_path = fd.askopenfilenames(
         title='Open files',
         initialdir=input_dir.get(),
@@ -638,6 +642,98 @@ chapter_preview_frame.grid(column=0, row=6, columnspan=2)
 multi_chapter_preview = ScrolledText(chapter_preview_frame, font=5,wrap=tk.WORD, height=13)
 multi_chapter_preview.grid(column=0, row=0, columnspan=2, ipady=5)
 
+### Tab6: Combine files ###
+def select_multi_files_for_combine():
+    # global multi_file_paths
+    filetypes = [('Accepted files', '*.txt'),
+                ('text files', '*.txt'),]
+    file_path = fd.askopenfilenames(
+        title='Open files',
+        initialdir=input_dir.get(),
+        filetypes=filetypes)
+
+    # Cancel
+    if file_path == '':
+        return
+
+    combined_listbox.clear_items()
+    combined_listbox.insert_items(file_path)
+
+    initial_output_name = os.path.splitext(os.path.basename(file_path[0]))[0]
+    output_name_var.set(end_with_epub(simple2Trad(initial_output_name)))
+    
+    combine_btn['state'] = 'normal'
+    
+def combine_epub_files():
+    input_file_paths = combined_listbox.get_items()
+    # get output directory
+    output_dir = output_dir_var.get()
+    if output_dir == "":
+        output_dir = ".\\output"
+    # get output name
+    output_path = os.path.join(output_dir, output_name_var.get())
+    
+    contents = []
+    for in_f in input_file_paths:
+        # Read all files and convert
+        content = translate(in_f)
+        contents.append(content)
+        
+    content = "".join(contents)
+    with open(TMP_TXT_PATH, 'w', encoding='utf-8') as f:
+        f.write(content)
+    try:
+        chapters = translate_and_convert(TMP_TXT_PATH, output_path, white_list.get("1.0","end-1c").split('\n'), black_list_elements_list, max_chapter_len_var.get())
+        preview_texts = "".join(chapters) + '\n' + '-'*100 + '\n'
+    except UnicodeDecodeError:
+            ERROR_MESSAGE['read_error']()
+            return
+
+    # clear chapter preview
+    clear_text_var(multi_chapter_preview)
+    multi_chapter_preview.insert(tk.INSERT, preview_texts)
+    showinfo(title="訊息",message="轉換成功")
+    
+    # Open explorer
+    if open_explorer_var.get() == True:
+        path = output_dir_var.get()
+        if path == '':
+            path = '.'
+        open_explorer(path)
+    
+monty6 = ttk.LabelFrame(tab6)
+monty6.grid(column=0, row=0)
+
+select_file_frame = create_label_frame("選擇檔案", monty6)
+select_file_frame.grid(column=0, row=0, columnspan=2, pady=8)
+
+combined_file_select_frame = create_label_frame("選擇檔案", monty6)
+combined_file_select_frame.grid(column=0, row=0, columnspan=2, pady=8)
+
+
+ttk.Button(select_file_frame, text="選擇", command=select_multi_files_for_combine, style="normal.TButton", width=12).grid(column=0, row=0)
+combined_listbox = ReorderableListbox(select_file_frame, font_size=12)
+combined_listbox.grid(column=0, row=1, ipady=5)
+
+ttk.Label(monty6, text="輸入目錄", font=lableFrame_font).grid(column=0, row=1, pady=10)
+ttk.Entry(monty6, textvariable=input_dir, width=70, font=13).grid(column=1, row=1, pady=10)
+
+ttk.Label(monty6, text="輸出名稱", font=lableFrame_font).grid(column=0, row=3, pady=10)
+ttk.Entry(monty6, textvariable=output_name_var, width=70, font=13).grid(column=1, row=3, pady=10)
+
+options = create_label_frame("選項", monty6)
+options.grid(column=0, row=4, columnspan=2, pady=8)
+ttk.Checkbutton(options, text="完成後開啟目錄",variable=open_explorer_var, style="normal.TCheckbutton").grid(column=0, row=0)
+ttk.Checkbutton(options, text="章節加入檔案名稱(TODO)",variable=chapter_name_with_file_name_var, style="normal.TCheckbutton").grid(column=0, row=0)
+
+combine_btn = ttk.Button(monty6, text="開始合併", command=combine_epub_files, state="disable", style="normal.TButton")
+combine_btn.grid(column=0, row=5, columnspan=2,pady=8)
+
+chapter_preview_frame = create_label_frame("章節預覽", monty6)
+chapter_preview_frame.grid(column=0, row=6, columnspan=2)
+multi_chapter_preview = ScrolledText(chapter_preview_frame, font=5,wrap=tk.WORD, height=13)
+multi_chapter_preview.grid(column=0, row=0, columnspan=2, ipady=5)
+
 ### Tab5: Download japenese novel ###
 monty5 = ttk.LabelFrame(tab5)
 monty5.grid(column=0, row=0)
@@ -649,7 +745,6 @@ ttk.Button(search_frame, text="搜尋", command=search_japanese_novel, style="no
 
 search_result_frame = create_label_frame("搜尋結果", search_frame)
 search_result_frame.grid(column=0, row=1, columnspan=2)
-
 
 # Novel List box
 japanese_novel_listbox = tk.Listbox(search_result_frame, listvariable=selected_japanese_novel_var, font=10, selectbackground="blue", selectmode="single", width=80)
@@ -673,7 +768,6 @@ ttk.Checkbutton(options, text="完成後開啟目錄",variable=open_explorer_var
 #ttk.Checkbutton(options, text="只有一結果時直接下載",variable=auto_download_japanese_var, style="normal.TCheckbutton").grid(column=1, row=0)
 #ttk.Checkbutton(options, text="整合全卷",variable=auto_convert_var, style="normal.TCheckbutton").grid(column=2, row=0)
 
-
 download_and_convert_japanese_btn = ttk.Button(download_options, text="下載並轉換", command=download_and_convert_japanese_novel, state="disable", style="normal.TButton", width=12)
 download_and_convert_japanese_btn.grid(column=0, row=4, columnspan=3, pady=10)
 
@@ -688,6 +782,7 @@ open_browser_japanese = ttk.Button(gdrive_frame, text="開啟瀏覽器", command
 open_browser_japanese.grid(column=0, row=1, columnspan=1, pady=10)
 copy_link_japanese = ttk.Button(gdrive_frame, text="複製到剪貼簿", command=copy_gdrive_link, style="normal.TButton", width=12, state="disable")
 copy_link_japanese.grid(column=1, row=1, columnspan=1, pady=10)
+
 
 if __name__ == "__main__":
     win.mainloop()

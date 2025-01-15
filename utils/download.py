@@ -702,6 +702,7 @@ class Wenku8_downloader(object):
             self.download_imgs(metadata)
         return True
     def download_img(self, url:str, idx:int):
+        print("Download img: ", url)
         soup = self.open_url(url, use_cookie=False)
         imgs = soup.find_all("div", class_="divimage")
         imgs = [img.find('a').get('href') for img in imgs]

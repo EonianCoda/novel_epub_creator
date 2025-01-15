@@ -69,12 +69,22 @@ class Ebook_creater(object):
         content = "<p>" # the content of the chapter
         chapter_name = "" # the name of the chapter
         chapter_names = []
+        last_chapter_match = ""
         for line in lines:
             if len(line.strip()) != 0:
                 # Fine whether this line is the name of the chapter
-                if self.get_search(line) and not self.in_black_list(line):
+                chapter_match = self.get_search(line)
+                if chapter_match is not False:
+                    chapter_match = chapter_match.group(0)
+                
+                if chapter_match is not False and not self.in_black_list(line):
+                    if last_chapter_match == chapter_match:
+                        continue
+                    last_chapter_match = chapter_match
                     # If True, mean find the next chapter, then add current chapter into the book
                     if chapter_name:
+                        if content == '<p>':
+                            print(chapter_name.strip() + " is empty")
                         content += "</p>"
                         book.add_chapter(chapter_name, content)
                         content = "<p>"
@@ -95,6 +105,13 @@ class Ebook_creater(object):
         book.write(output_name, author)
         return chapter_names
 
+def translate(input_path: str) -> str:
+    content = read_file(input_path)
+    if content == None:
+        raise UnicodeDecodeError
+    content = simple2Trad(content)
+    return content
+
 def translate_and_convert(input_path: str, 
                             output_path: str, 
                             white_list: list = [], 
@@ -102,10 +119,7 @@ def translate_and_convert(input_path: str,
                             max_chapter_name_len:int=-1, 
                             author: str = "",
                             imgs_path: str=""):
-    content = read_file(input_path)
-    if content == None:
-        raise UnicodeDecodeError
-    content = simple2Trad(content)
+    content = translate(input_path)
     lines = content.splitlines(True)
 
     ebook_creater = Ebook_creater(white_list=white_list,
@@ -140,6 +154,8 @@ def simple2Trad(content:str):
     """
     cc = OpenCC('s2twp')
     content = cc.convert(content)
+    content = content.replace('計程車兵', '的士兵')
+    content = content.replace('巨集', '宏')
     return content
 
 def Trad2simple(content:str):
